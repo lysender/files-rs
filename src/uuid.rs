@@ -1,6 +1,5 @@
-use uuid::{Timestamp, Uuid};
+use uuid::Uuid;
 
 pub fn generate_id() -> String {
-    let ts = Timestamp::now(context);
-    let uuid = Uuid::new_v7(ts);
+    Uuid::now_v7().as_simple().to_string()
 }
