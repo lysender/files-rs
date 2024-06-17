@@ -19,7 +19,7 @@ pub use self::error::{Error, Result};
 async fn main() {
     // Set the RUST_LOG, if it hasn't been explicitly defined
     if std::env::var_os("RUST_LOG").is_none() {
-        std::env::set_var("RUST_LOG", "au4_crawler=info")
+        std::env::set_var("RUST_LOG", "files_rs=info")
     }
 
     tracing_subscriber::fmt()
