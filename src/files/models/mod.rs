@@ -10,6 +10,15 @@ pub struct Bucket {
     pub label: String,
 }
 
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::buckets)]
+pub struct NewBucket {
+    pub id: String,
+    pub client_id: String,
+    pub name: String,
+    pub label: String,
+}
+
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::schema::directories)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
