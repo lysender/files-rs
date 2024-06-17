@@ -28,7 +28,7 @@ Simple file storage service written in Rust
 
 ## Models
 
-Client:
+Client (don't need persistence for now):
 - id
 - name
 
