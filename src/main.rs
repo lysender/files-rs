@@ -12,6 +12,7 @@ mod db;
 mod error;
 mod files;
 mod schema;
+mod uuid;
 mod web;
 
 // Re-export error types for convenience

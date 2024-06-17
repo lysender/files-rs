@@ -1,10 +1,11 @@
 use deadpool_diesel::sqlite::Pool;
+use uuid::Uuid;
 
 use diesel::prelude::*;
 use diesel::{QueryDsl, SelectableHelper};
 use tracing::error;
 
-use crate::files::models::Bucket;
+use crate::files::models::{Bucket, NewBucket};
 use crate::schema::buckets::dsl;
 use crate::schema::buckets::dsl::buckets;
 use crate::Result;
@@ -39,4 +40,6 @@ pub async fn list_buckets(db_pool: Pool, client_id: &str) -> Result<Vec<Bucket>>
     }
 }
 
-pub async fn create_bucket()
+pub async fn create_bucket(db_pool: Pool, client_id: &str, data: NewBucket) -> Result<Bucket> {
+    todo!("foo")
+}

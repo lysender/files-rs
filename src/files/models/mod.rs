@@ -1,6 +1,6 @@
 use diesel::prelude::*;
 
-#[derive(Queryable, Selectable)]
+#[derive(Queryable, Selectable, Insertable)]
 #[diesel(table_name = crate::schema::buckets)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Bucket {
@@ -10,11 +10,8 @@ pub struct Bucket {
     pub label: String,
 }
 
-#[derive(Insertable)]
-#[diesel(table_name = crate::schema::buckets)]
+#[derive(Debug, Clone)]
 pub struct NewBucket {
-    pub id: String,
-    pub client_id: String,
     pub name: String,
     pub label: String,
 }
