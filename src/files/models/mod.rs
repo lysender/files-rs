@@ -1,3 +1,3 @@
-mod bucket;
-mod directory;
-mod file;
+pub mod bucket;
+pub mod directory;
+pub mod file;

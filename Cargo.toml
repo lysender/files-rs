@@ -8,6 +8,7 @@ anyhow = "1.0.86"
 axum = { version = "0.7.5", features = ["macros"] }
 bigdecimal = "0.4.4"
 clap = { version = "4.5.7", features = ["derive"] }
+deadpool-diesel = { version = "0.6.1", features = ["sqlite"] }
 derive_more = { version = "0.99.18", features = ["from"] }
 diesel = { version = "2.2.1", features = ["sqlite"] }
 dotenvy = "0.15.7"
