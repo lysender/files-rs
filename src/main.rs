@@ -8,8 +8,10 @@ use crate::web::server::run;
 
 mod auth;
 mod config;
+mod db;
 mod error;
 mod files;
+mod schema;
 mod web;
 
 // Re-export error types for convenience

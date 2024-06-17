@@ -10,6 +10,7 @@ bigdecimal = "0.4.4"
 clap = { version = "4.5.7", features = ["derive"] }
 derive_more = { version = "0.99.18", features = ["from"] }
 diesel = { version = "2.2.1", features = ["sqlite"] }
+dotenvy = "0.15.7"
 jwt-simple = { version = "0.12.9", default-features = false, features = ["pure-rust"] }
 rand = "0.8.5"
 serde = { version = "1.0.203", features = ["derive"] }

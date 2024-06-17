@@ -2,7 +2,7 @@
 
 diesel::table! {
     buckets (id) {
-        id -> Nullable<Text>,
+        id -> Text,
         client_id -> Text,
         name -> Text,
         label -> Text,
@@ -11,14 +11,14 @@ diesel::table! {
 
 diesel::table! {
     directories (id) {
-        id -> Nullable<Text>,
+        id -> Text,
         dir_type -> Text,
         bucket_id -> Text,
         name -> Text,
         label -> Text,
         file_count -> Integer,
-        created_at -> Integer,
-        updated_at -> Integer,
+        created_at -> BigInt,
+        updated_at -> BigInt,
     }
 }
 

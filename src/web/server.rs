@@ -7,6 +7,7 @@ use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{info, Level};
 
 use crate::config::Config;
+use crate::db::connection::connect;
 use crate::web::routes::all_routes;
 use crate::Result;
 
@@ -17,6 +18,10 @@ pub struct AppState {
 
 pub async fn run(config: Config) -> Result<()> {
     let port = config.server.port;
+
+    // Connect to the database first
+    let connection = connect();
+
     let state = AppState { config };
 
     let mut routes_all = Router::new()
