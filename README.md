@@ -40,13 +40,17 @@ Bucket:
 
 Directory:
 - id
-- bucket_id
 - dir_type
+- bucket_id
 - name
 - label
 - file_count
 - created_at
 - updated_at
+
+File:
+- name
+- url
 
 Files do not have a model represented in the database. They are stored in the storage service.
 
