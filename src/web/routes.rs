@@ -5,12 +5,12 @@ use axum::{
     Router,
 };
 
-use super::{home::home_handler, not_found::not_found_handler};
+use super::{buckets::routes::buckets_routes, home::home_handler, not_found::not_found_handler};
 
 pub fn all_routes(state: AppState) -> Router {
-    // Route root and fallback to the same proxy handler
     Router::new()
         .route("/", get(home_handler))
+        .nest("/v1/buckets", buckets_routes(state.clone()))
         .fallback(any(not_found_handler))
         .with_state(state)
 }

@@ -58,7 +58,7 @@ To list directory files, simply fetch them from the cloud storage service.
 
 ## API Endpoints
 
-- GET /api/v1/buckets/:bucket_id/dirs
-- POST /api/v1/buckets/:bucket_id/dirs
-- GET /api/v1/buckets/:bucket_id/dirs/:dir_id/files
+- GET /v1/buckets/:bucket_id/dirs
+- POST /v1/buckets/:bucket_id/dirs
+- GET /v1/buckets/:bucket_id/dirs/:dir_id/files
 
