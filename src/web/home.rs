@@ -1,7 +1,15 @@
-use axum::{body::Body, http::StatusCode, response::Response};
+use axum::{response::IntoResponse, Json};
+use serde::Serialize;
 
-pub async fn home_handler() -> Response<Body> {
-    let r = Response::builder().status((StatusCode::OK).as_u16());
-    let body = "OK".to_string();
-    r.body(Body::from(body)).unwrap()
+#[derive(Serialize)]
+pub struct AppMeta {
+    pub name: String,
+    pub version: String,
+}
+
+pub async fn home_handler() -> impl IntoResponse {
+    Json(AppMeta {
+        name: "files-rs".to_string(),
+        version: "0.1.0".to_string(),
+    })
 }
