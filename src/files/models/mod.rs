@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 use serde::Serialize;
 
-#[derive(Clone, Queryable, Selectable, Insertable, Serialize)]
+#[derive(Debug, Clone, Queryable, Selectable, Insertable, Serialize)]
 #[diesel(table_name = crate::schema::buckets)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Bucket {
@@ -17,7 +17,7 @@ pub struct NewBucket {
     pub label: String,
 }
 
-#[derive(Clone, Queryable, Selectable, Insertable, Serialize)]
+#[derive(Debug, Clone, Queryable, Selectable, Insertable, Serialize)]
 #[diesel(table_name = crate::schema::directories)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Directory {

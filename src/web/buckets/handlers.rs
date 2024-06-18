@@ -1,13 +1,13 @@
 use axum::{
     body::Body,
-    extract::State,
+    extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
+    Extension, Json,
 };
 
 use crate::{
-    files::queries::buckets::list_buckets,
+    files::{models::Bucket, queries::buckets::list_buckets},
     web::{error::ErrorResponse, server::AppState},
 };
 
@@ -43,10 +43,9 @@ pub async fn create_bucket_handler(State(_state): State<AppState>) -> Response<B
     r.body(Body::from(body)).unwrap()
 }
 
-pub async fn get_bucket_handler(State(_state): State<AppState>) -> Response<Body> {
-    let r = Response::builder().status((StatusCode::OK).as_u16());
-    let body = "Home page".to_string();
-    r.body(Body::from(body)).unwrap()
+pub async fn get_bucket_handler(Extension(bucket): Extension<Bucket>) -> impl IntoResponse {
+    // Extract bucket from the middleware extension
+    Json(bucket)
 }
 
 pub async fn update_bucket_handler(State(_state): State<AppState>) -> Response<Body> {
