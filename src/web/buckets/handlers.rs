@@ -50,12 +50,12 @@ pub async fn get_bucket_handler(Extension(bucket): Extension<Bucket>) -> impl In
 
 pub async fn update_bucket_handler(State(_state): State<AppState>) -> Response<Body> {
     let r = Response::builder().status((StatusCode::OK).as_u16());
-    let body = "Home page".to_string();
+    let body = "update bucket".to_string();
     r.body(Body::from(body)).unwrap()
 }
 
 pub async fn delete_bucket_handler(State(_state): State<AppState>) -> Response<Body> {
     let r = Response::builder().status((StatusCode::OK).as_u16());
-    let body = "Home page".to_string();
+    let body = "delete bucket".to_string();
     r.body(Body::from(body)).unwrap()
 }
