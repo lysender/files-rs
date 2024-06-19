@@ -42,8 +42,6 @@ pub async fn create_bucket_handler(
     let config = state.config.clone();
     let client_id = config.client_id.clone();
 
-    println!("Creating bucket: {:?}", payload);
-
     let bucket_res = create_bucket(pool, client_id.as_str(), payload).await;
     let Ok(bucket) = bucket_res else {
         return create_error_response(

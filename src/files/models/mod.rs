@@ -1,44 +1,10 @@
-use diesel::prelude::*;
-use serde::{Deserialize, Serialize};
+mod bucket;
+mod directory;
+mod file;
+pub mod validators;
 
-#[derive(Debug, Clone, Queryable, Selectable, Insertable, Serialize)]
-#[diesel(table_name = crate::schema::buckets)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
-pub struct Bucket {
-    pub id: String,
-    pub client_id: String,
-    pub name: String,
-    pub label: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct NewBucket {
-    pub name: String,
-    pub label: String,
-}
-
-#[derive(Debug, Clone, Queryable, Selectable, Insertable, Serialize)]
-#[diesel(table_name = crate::schema::directories)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
-pub struct Directory {
-    pub id: String,
-    pub dir_type: String,
-    pub bucket_id: String,
-    pub name: String,
-    pub label: String,
-    pub file_count: i32,
-    pub created_at: i64,
-    pub updated_at: i64,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct NewDirectory {
-    pub name: String,
-    pub label: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct File {
-    pub name: String,
-    pub url: String,
-}
+pub type Bucket = bucket::Bucket;
+pub type NewBucket = bucket::NewBucket;
+pub type Directory = directory::Directory;
+pub type NewDirectory = directory::NewDirectory;
+pub type File = file::File;

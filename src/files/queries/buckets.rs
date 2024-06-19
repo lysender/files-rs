@@ -44,6 +44,12 @@ pub async fn create_bucket(db_pool: Pool, client_id: &str, data: NewBucket) -> R
         return Err("Error getting db connection".into());
     };
 
+    for ch in data.name.chars() {
+        if ch.is_alphanumeric() || ch == '-' {
+            // Looks good
+        }
+    }
+
     let bucket = Bucket {
         id: generate_id(),
         client_id: client_id.to_string(),
