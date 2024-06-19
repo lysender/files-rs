@@ -6,6 +6,8 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
     #[from]
     AnyError(String),
+
+    ValidationError(String),
 }
 
 // Allow string slices to be converted to Error
@@ -20,6 +22,7 @@ impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             Self::AnyError(val) => write!(f, "{}", val),
+            Self::ValidationError(val) => write!(f, "{}", val),
         }
     }
 }

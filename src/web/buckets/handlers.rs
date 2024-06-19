@@ -12,7 +12,9 @@ use crate::{
         queries::buckets::{create_bucket, list_buckets},
     },
     web::{
-        response::{create_error_response, create_response, create_success_response},
+        response::{
+            create_error_response, create_response, create_success_response, to_error_response,
+        },
         server::AppState,
     },
 };
@@ -43,15 +45,10 @@ pub async fn create_bucket_handler(
     let client_id = config.client_id.clone();
 
     let bucket_res = create_bucket(pool, client_id.as_str(), payload).await;
-    let Ok(bucket) = bucket_res else {
-        return create_error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to list buckets".to_string(),
-            "Internal Server Error".to_string(),
-        );
-    };
-
-    create_response(StatusCode::CREATED, serde_json::to_string(&bucket).unwrap())
+    match bucket_res {
+        Ok(bucket) => create_response(StatusCode::CREATED, serde_json::to_string(&bucket).unwrap()),
+        Err(error) => to_error_response(error),
+    }
 }
 
 pub async fn get_bucket_handler(Extension(bucket): Extension<Bucket>) -> Response<Body> {

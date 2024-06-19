@@ -15,8 +15,35 @@ pub struct Bucket {
 #[derive(Debug, Clone, Deserialize, Validate)]
 pub struct NewBucket {
     #[validate(length(min = 1, max = 50))]
+    #[validate(custom(function = "crate::files::models::validators::sluggable_string"))]
     pub name: String,
 
     #[validate(length(min = 1, max = 100))]
     pub label: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_bucket() {
+        let data = NewBucket {
+            name: "hello-world".to_string(),
+            label: "Hello World".to_string(),
+        };
+        assert!(data.validate().is_ok());
+
+        let data = NewBucket {
+            name: "hello_world".to_string(),
+            label: "Hello World".to_string(),
+        };
+        assert!(data.validate().is_err());
+
+        let data = NewBucket {
+            name: "".to_string(),
+            label: "Hello World".to_string(),
+        };
+        assert!(data.validate().is_err());
+    }
 }

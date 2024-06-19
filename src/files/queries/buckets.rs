@@ -1,13 +1,17 @@
+use std::borrow::Borrow;
+
 use deadpool_diesel::sqlite::Pool;
 
 use diesel::prelude::*;
 use diesel::{QueryDsl, SelectableHelper};
 use tracing::error;
+use validator::Validate;
 
+use crate::files::models::validators::flatten_errors;
 use crate::files::models::{Bucket, NewBucket};
 use crate::schema::buckets::{self, dsl};
 use crate::uuid::generate_id;
-use crate::Result;
+use crate::{Error, Result};
 
 pub async fn list_buckets(db_pool: Pool, client_id: &str) -> Result<Vec<Bucket>> {
     let Ok(db) = db_pool.get().await else {
@@ -44,10 +48,8 @@ pub async fn create_bucket(db_pool: Pool, client_id: &str, data: NewBucket) -> R
         return Err("Error getting db connection".into());
     };
 
-    for ch in data.name.chars() {
-        if ch.is_alphanumeric() || ch == '-' {
-            // Looks good
-        }
+    if let Err(errors) = data.validate() {
+        return Err(Error::ValidationError(flatten_errors(&errors)));
     }
 
     let bucket = Bucket {

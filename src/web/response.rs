@@ -1,6 +1,7 @@
 use axum::{body::Body, http::StatusCode, response::Response};
 
 use crate::web::error::ErrorResponse;
+use crate::Error;
 
 pub fn create_response(status: StatusCode, body: String) -> Response<Body> {
     Response::builder()
@@ -22,4 +23,17 @@ pub fn create_error_response(status: StatusCode, message: String, error: String)
     };
 
     return create_response(status, serde_json::to_string(&body).unwrap());
+}
+
+pub fn to_error_response(error: Error) -> Response<Body> {
+    match error {
+        Error::AnyError(message) => create_error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            message,
+            "Internal Server Error".to_string(),
+        ),
+        Error::ValidationError(message) => {
+            create_error_response(StatusCode::BAD_REQUEST, message, "Bad Request".to_string())
+        }
+    }
 }
