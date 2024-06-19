@@ -1,14 +1,20 @@
 use axum::{
     body::Body,
-    extract::{Path, State},
+    extract::{Json, Path, State},
     http::StatusCode,
-    response::{IntoResponse, Response},
-    Extension, Json,
+    response::Response,
+    Extension,
 };
 
 use crate::{
-    files::{models::Bucket, queries::buckets::list_buckets},
-    web::{error::create_error_response, server::AppState},
+    files::{
+        models::{Bucket, NewBucket},
+        queries::buckets::{create_bucket, list_buckets},
+    },
+    web::{
+        response::{create_error_response, create_response, create_success_response},
+        server::AppState,
+    },
 };
 
 pub async fn list_buckets_handler(State(state): State<AppState>) -> Response<Body> {
@@ -25,22 +31,34 @@ pub async fn list_buckets_handler(State(state): State<AppState>) -> Response<Bod
         );
     };
 
-    let res = Response::builder()
-        .status(StatusCode::OK)
-        .body(Body::from(serde_json::to_string(&buckets).unwrap()))
-        .unwrap();
-    res
+    create_success_response(serde_json::to_string(&buckets).unwrap())
 }
 
-pub async fn create_bucket_handler(State(_state): State<AppState>) -> Response<Body> {
-    let r = Response::builder().status((StatusCode::OK).as_u16());
-    let body = "Home page".to_string();
-    r.body(Body::from(body)).unwrap()
+pub async fn create_bucket_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<NewBucket>,
+) -> Response<Body> {
+    let pool = state.db_pool.clone();
+    let config = state.config.clone();
+    let client_id = config.client_id.clone();
+
+    println!("Creating bucket: {:?}", payload);
+
+    let bucket_res = create_bucket(pool, client_id.as_str(), payload).await;
+    let Ok(bucket) = bucket_res else {
+        return create_error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to list buckets".to_string(),
+            "Internal Server Error".to_string(),
+        );
+    };
+
+    create_response(StatusCode::CREATED, serde_json::to_string(&bucket).unwrap())
 }
 
-pub async fn get_bucket_handler(Extension(bucket): Extension<Bucket>) -> impl IntoResponse {
+pub async fn get_bucket_handler(Extension(bucket): Extension<Bucket>) -> Response<Body> {
     // Extract bucket from the middleware extension
-    Json(bucket)
+    return create_success_response(serde_json::to_string(&bucket).unwrap());
 }
 
 pub async fn update_bucket_handler(State(_state): State<AppState>) -> Response<Body> {
