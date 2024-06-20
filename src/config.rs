@@ -3,7 +3,7 @@ use dotenvy::dotenv;
 use serde::Deserialize;
 use std::env;
 
-use crate::{uuid::valid_id, Result};
+use crate::{util::valid_id, Result};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
