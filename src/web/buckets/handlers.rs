@@ -9,7 +9,7 @@ use axum::{
 use crate::{
     files::{
         models::{Bucket, NewBucket, UpdateBucket},
-        queries::buckets::{create_bucket, get_bucket, list_buckets, update_bucket},
+        queries::buckets::{create_bucket, delete_bucket, get_bucket, list_buckets, update_bucket},
     },
     web::{
         response::{
@@ -98,8 +98,14 @@ async fn get_bucket_as_response(state: &AppState, id: &str) -> Response<Body> {
     create_success_response(serde_json::to_string(&bucket).unwrap())
 }
 
-pub async fn delete_bucket_handler(State(_state): State<AppState>) -> Response<Body> {
-    let r = Response::builder().status((StatusCode::OK).as_u16());
-    let body = "delete bucket".to_string();
-    r.body(Body::from(body)).unwrap()
+pub async fn delete_bucket_handler(
+    State(state): State<AppState>,
+    Path(bucket_id): Path<String>,
+) -> Response<Body> {
+    let pool = state.db_pool.clone();
+    let bucket_res = delete_bucket(pool, bucket_id.as_str()).await;
+    match bucket_res {
+        Ok(_) => create_response(StatusCode::NO_CONTENT, "".to_string()),
+        Err(error) => to_error_response(error),
+    }
 }

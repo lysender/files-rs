@@ -151,3 +151,30 @@ pub async fn update_bucket(db_pool: Pool, id: &str, data: &UpdateBucket) -> Resu
         }
     }
 }
+
+pub async fn delete_bucket(db_pool: Pool, id: &str) -> Result<()> {
+    let Ok(db) = db_pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+
+    let bucket_id = id.to_string();
+    let conn_result = db
+        .interact(move |conn| {
+            diesel::delete(dsl::buckets.filter(dsl::id.eq(bucket_id.as_str()))).execute(conn)
+        })
+        .await;
+
+    match conn_result {
+        Ok(delete_res) => match delete_res {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                error!("{}", e);
+                Err("Error deleting bucket".into())
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            Err("Error using the db connection".into())
+        }
+    }
+}
