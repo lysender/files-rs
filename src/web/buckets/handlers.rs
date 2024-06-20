@@ -20,11 +20,8 @@ use crate::{
 };
 
 pub async fn list_buckets_handler(State(state): State<AppState>) -> Response<Body> {
-    let config = state.config.clone();
-    let client_id = config.client_id.clone();
-
-    let buckets_res = list_buckets(&state.db_pool, client_id.as_str()).await;
-    let Ok(buckets) = buckets_res else {
+    let res = list_buckets(&state.db_pool, &state.config.client_id).await;
+    let Ok(buckets) = res else {
         return create_error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to list buckets".to_string(),
@@ -39,8 +36,8 @@ pub async fn create_bucket_handler(
     State(state): State<AppState>,
     Json(payload): Json<NewBucket>,
 ) -> Response<Body> {
-    let bucket_res = create_bucket(&state.db_pool, &state.config.client_id, &payload).await;
-    match bucket_res {
+    let res = create_bucket(&state.db_pool, &state.config.client_id, &payload).await;
+    match res {
         Ok(bucket) => create_response(StatusCode::CREATED, serde_json::to_string(&bucket).unwrap()),
         Err(error) => to_error_response(error),
     }
@@ -57,8 +54,8 @@ pub async fn update_bucket_handler(
     Path(bucket_id): Path<String>,
     Json(payload): Json<UpdateBucket>,
 ) -> Response<Body> {
-    let bucket_res = update_bucket(&state.db_pool, &bucket_id, &payload).await;
-    match bucket_res {
+    let res = update_bucket(&state.db_pool, &bucket_id, &payload).await;
+    match res {
         Ok(updated) => {
             if updated {
                 get_bucket_as_response(&state, &bucket_id).await
@@ -72,8 +69,8 @@ pub async fn update_bucket_handler(
 }
 
 async fn get_bucket_as_response(state: &AppState, id: &str) -> Response<Body> {
-    let query_res = get_bucket(&state.db_pool, id).await;
-    let Ok(bucket_res) = query_res else {
+    let res = get_bucket(&state.db_pool, id).await;
+    let Ok(bucket_res) = res else {
         return create_error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
             "Error getting bucket".to_string(),
@@ -96,8 +93,8 @@ pub async fn delete_bucket_handler(
     State(state): State<AppState>,
     Path(bucket_id): Path<String>,
 ) -> Response<Body> {
-    let bucket_res = delete_bucket(&state.db_pool, &bucket_id).await;
-    match bucket_res {
+    let res = delete_bucket(&state.db_pool, &bucket_id).await;
+    match res {
         Ok(_) => create_response(StatusCode::NO_CONTENT, "".to_string()),
         Err(error) => to_error_response(error),
     }

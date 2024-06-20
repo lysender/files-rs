@@ -1,4 +1,5 @@
 pub mod buckets;
+pub mod dirs;
 pub mod error;
 pub mod home;
 pub mod middlewares;

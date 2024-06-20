@@ -1,10 +1,11 @@
 mod bucket;
-mod directory;
+mod dir;
 mod file;
 
 pub use bucket::Bucket;
 pub use bucket::NewBucket;
 pub use bucket::UpdateBucket;
-pub use directory::Directory;
-pub use directory::NewDirectory;
+pub use dir::Dir;
+pub use dir::NewDir;
+pub use dir::UpdateDir;
 pub use file::File;

@@ -4,7 +4,9 @@ use axum::{
     Router,
 };
 
-use crate::web::{middlewares::bucket::bucket_middleware, server::AppState};
+use crate::web::{
+    dirs::routes::dir_routes, middlewares::bucket::bucket_middleware, server::AppState,
+};
 
 use super::handlers::{
     create_bucket_handler, delete_bucket_handler, get_bucket_handler, list_buckets_handler,
@@ -23,6 +25,7 @@ fn inner_bucket_routes(state: AppState) -> Router<AppState> {
         .route("/", get(get_bucket_handler))
         .route("/", patch(update_bucket_handler))
         .route("/", delete(delete_bucket_handler))
+        .nest("/dirs", dir_routes(state.clone()))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             bucket_middleware,
