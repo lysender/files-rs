@@ -1,6 +1,6 @@
 use deadpool_diesel::sqlite::Pool;
 
-use diesel::dsl::{count, count_star};
+use diesel::dsl::count_star;
 use diesel::prelude::*;
 use diesel::{QueryDsl, SelectableHelper};
 use tracing::error;
