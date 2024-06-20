@@ -18,7 +18,6 @@ pub async fn bucket_middleware(
     mut request: Request,
     next: Next,
 ) -> Response<Body> {
-    let pool = state.db_pool.clone();
     let bid = bucket_id.clone();
     if !valid_id(bid.as_str()) {
         return create_error_response(
@@ -28,7 +27,7 @@ pub async fn bucket_middleware(
         );
     }
 
-    let query_res = get_bucket(pool, bid.as_str()).await;
+    let query_res = get_bucket(&state.db_pool, bid.as_str()).await;
     let Ok(bucket_res) = query_res else {
         return create_error_response(
             StatusCode::INTERNAL_SERVER_ERROR,

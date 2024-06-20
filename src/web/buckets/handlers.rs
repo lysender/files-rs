@@ -20,11 +20,10 @@ use crate::{
 };
 
 pub async fn list_buckets_handler(State(state): State<AppState>) -> Response<Body> {
-    let pool = state.db_pool.clone();
     let config = state.config.clone();
     let client_id = config.client_id.clone();
 
-    let buckets_res = list_buckets(pool, client_id.as_str()).await;
+    let buckets_res = list_buckets(&state.db_pool, client_id.as_str()).await;
     let Ok(buckets) = buckets_res else {
         return create_error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -40,11 +39,10 @@ pub async fn create_bucket_handler(
     State(state): State<AppState>,
     Json(payload): Json<NewBucket>,
 ) -> Response<Body> {
-    let pool = state.db_pool.clone();
     let config = state.config.clone();
     let client_id = config.client_id.clone();
 
-    let bucket_res = create_bucket(pool, client_id.as_str(), payload).await;
+    let bucket_res = create_bucket(&state.db_pool, client_id.as_str(), payload).await;
     match bucket_res {
         Ok(bucket) => create_response(StatusCode::CREATED, serde_json::to_string(&bucket).unwrap()),
         Err(error) => to_error_response(error),
@@ -62,8 +60,7 @@ pub async fn update_bucket_handler(
     Path(bucket_id): Path<String>,
     Json(payload): Json<UpdateBucket>,
 ) -> Response<Body> {
-    let pool = state.db_pool.clone();
-    let bucket_res = update_bucket(pool, bucket_id.as_str(), &payload).await;
+    let bucket_res = update_bucket(&state.db_pool, bucket_id.as_str(), &payload).await;
     match bucket_res {
         Ok(updated) => {
             if updated {
@@ -78,7 +75,7 @@ pub async fn update_bucket_handler(
 }
 
 async fn get_bucket_as_response(state: &AppState, id: &str) -> Response<Body> {
-    let query_res = get_bucket(state.db_pool.clone(), id).await;
+    let query_res = get_bucket(&state.db_pool, id).await;
     let Ok(bucket_res) = query_res else {
         return create_error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -102,8 +99,7 @@ pub async fn delete_bucket_handler(
     State(state): State<AppState>,
     Path(bucket_id): Path<String>,
 ) -> Response<Body> {
-    let pool = state.db_pool.clone();
-    let bucket_res = delete_bucket(pool, bucket_id.as_str()).await;
+    let bucket_res = delete_bucket(&state.db_pool, bucket_id.as_str()).await;
     match bucket_res {
         Ok(_) => create_response(StatusCode::NO_CONTENT, "".to_string()),
         Err(error) => to_error_response(error),
