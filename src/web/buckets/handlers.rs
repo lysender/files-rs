@@ -8,8 +8,8 @@ use axum::{
 
 use crate::{
     files::{
-        models::{Bucket, NewBucket},
-        queries::buckets::{create_bucket, list_buckets},
+        models::{Bucket, NewBucket, UpdateBucket},
+        queries::buckets::{create_bucket, get_bucket, list_buckets, update_bucket},
     },
     web::{
         response::{
@@ -56,10 +56,46 @@ pub async fn get_bucket_handler(Extension(bucket): Extension<Bucket>) -> Respons
     return create_success_response(serde_json::to_string(&bucket).unwrap());
 }
 
-pub async fn update_bucket_handler(State(_state): State<AppState>) -> Response<Body> {
-    let r = Response::builder().status((StatusCode::OK).as_u16());
-    let body = "update bucket".to_string();
-    r.body(Body::from(body)).unwrap()
+pub async fn update_bucket_handler(
+    State(state): State<AppState>,
+    Extension(bucket): Extension<Bucket>,
+    Path(bucket_id): Path<String>,
+    Json(payload): Json<UpdateBucket>,
+) -> Response<Body> {
+    let pool = state.db_pool.clone();
+    let bucket_res = update_bucket(pool, bucket_id.as_str(), &payload).await;
+    match bucket_res {
+        Ok(updated) => {
+            if updated {
+                get_bucket_as_response(&state, bucket_id.as_str()).await
+            } else {
+                // Just send back the original bucket
+                create_success_response(serde_json::to_string(&bucket).unwrap())
+            }
+        }
+        Err(error) => to_error_response(error),
+    }
+}
+
+async fn get_bucket_as_response(state: &AppState, id: &str) -> Response<Body> {
+    let query_res = get_bucket(state.db_pool.clone(), id).await;
+    let Ok(bucket_res) = query_res else {
+        return create_error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Error getting bucket".to_string(),
+            "Internal Server Error".to_string(),
+        );
+    };
+
+    let Some(bucket) = bucket_res else {
+        return create_error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Error getting bucket, bucket not found".to_string(),
+            "Internal Server Error".to_string(),
+        );
+    };
+
+    create_success_response(serde_json::to_string(&bucket).unwrap())
 }
 
 pub async fn delete_bucket_handler(State(_state): State<AppState>) -> Response<Body> {

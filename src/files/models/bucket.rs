@@ -22,6 +22,13 @@ pub struct NewBucket {
     pub label: String,
 }
 
+#[derive(Debug, Clone, Deserialize, Validate, AsChangeset)]
+#[diesel(table_name = crate::schema::buckets)]
+pub struct UpdateBucket {
+    #[validate(length(min = 1, max = 100))]
+    pub label: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-
 use deadpool_diesel::sqlite::Pool;
 
 use diesel::prelude::*;
@@ -8,7 +6,7 @@ use tracing::error;
 use validator::Validate;
 
 use crate::files::models::validators::flatten_errors;
-use crate::files::models::{Bucket, NewBucket};
+use crate::files::models::{Bucket, NewBucket, UpdateBucket};
 use crate::schema::buckets::{self, dsl};
 use crate::uuid::generate_id;
 use crate::{Error, Result};
@@ -32,22 +30,18 @@ pub async fn list_buckets(db_pool: Pool, client_id: &str) -> Result<Vec<Bucket>>
         Ok(select_res) => match select_res {
             Ok(items) => Ok(items),
             Err(e) => {
-                error!("{e}");
+                error!("{}", e);
                 Err("Error reading buckets".into())
             }
         },
         Err(e) => {
-            error!("{e}");
+            error!("{}", e);
             Err("Error using the db connection".into())
         }
     }
 }
 
 pub async fn create_bucket(db_pool: Pool, client_id: &str, data: NewBucket) -> Result<Bucket> {
-    let Ok(db) = db_pool.get().await else {
-        return Err("Error getting db connection".into());
-    };
-
     if let Err(errors) = data.validate() {
         return Err(Error::ValidationError(flatten_errors(&errors)));
     }
@@ -57,6 +51,10 @@ pub async fn create_bucket(db_pool: Pool, client_id: &str, data: NewBucket) -> R
         client_id: client_id.to_string(),
         name: data.name,
         label: data.label,
+    };
+
+    let Ok(db) = db_pool.get().await else {
+        return Err("Error getting db connection".into());
     };
 
     let bucket_copy = bucket.clone();
@@ -72,12 +70,12 @@ pub async fn create_bucket(db_pool: Pool, client_id: &str, data: NewBucket) -> R
         Ok(insert_res) => match insert_res {
             Ok(_) => Ok(bucket),
             Err(e) => {
-                error!("{e}");
+                error!("{}", e);
                 Err("Error creating a bucket".into())
             }
         },
         Err(e) => {
-            error!("{e}");
+            error!("{}", e);
             Err("Error using the db connection".into())
         }
     }
@@ -103,12 +101,52 @@ pub async fn get_bucket(db_pool: Pool, id: &str) -> Result<Option<Bucket>> {
         Ok(select_res) => match select_res {
             Ok(item) => Ok(item),
             Err(e) => {
-                error!("{e}");
+                error!("{}", e);
                 Err("Error reading buckets".into())
             }
         },
         Err(e) => {
-            error!("{e}");
+            error!("{}", e);
+            Err("Error using the db connection".into())
+        }
+    }
+}
+
+pub async fn update_bucket(db_pool: Pool, id: &str, data: &UpdateBucket) -> Result<bool> {
+    let Ok(db) = db_pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+
+    if let Err(errors) = data.validate() {
+        return Err(Error::ValidationError(flatten_errors(&errors)));
+    }
+
+    // Do not update if there is no data to update
+    if data.label.is_none() {
+        return Ok(false);
+    }
+
+    let data_copy = data.clone();
+    let bucket_id = id.to_string();
+    let conn_result = db
+        .interact(move |conn| {
+            diesel::update(dsl::buckets)
+                .filter(dsl::id.eq(bucket_id.as_str()))
+                .set(data_copy)
+                .execute(conn)
+        })
+        .await;
+
+    match conn_result {
+        Ok(update_res) => match update_res {
+            Ok(item) => Ok(item > 0),
+            Err(e) => {
+                error!("{}", e);
+                Err("Error updating bucket".into())
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
             Err("Error using the db connection".into())
         }
     }

@@ -8,6 +8,8 @@ pub enum Error {
     AnyError(String),
 
     ValidationError(String),
+
+    NotFound(String),
 }
 
 // Allow string slices to be converted to Error
@@ -23,6 +25,7 @@ impl core::fmt::Display for Error {
         match self {
             Self::AnyError(val) => write!(f, "{}", val),
             Self::ValidationError(val) => write!(f, "{}", val),
+            Self::NotFound(val) => write!(f, "{}", val),
         }
     }
 }
