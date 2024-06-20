@@ -4,7 +4,7 @@ use axum::{
     Router,
 };
 
-use crate::web::{middlewares::buckets::bucket_middleware, server::AppState};
+use crate::web::{middlewares::bucket::bucket_middleware, server::AppState};
 
 use super::handlers::{
     create_bucket_handler, delete_bucket_handler, get_bucket_handler, list_buckets_handler,

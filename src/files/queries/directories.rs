@@ -6,11 +6,11 @@ use tracing::error;
 
 use crate::files::models::{Directory, NewDirectory};
 use crate::schema::directories::{self, dsl};
-use crate::uuid::generate_id;
+use crate::util::generate_id;
 use crate::Result;
 
-pub async fn list_directories(db_pool: Pool, bucket_id: &str) -> Result<Vec<Directory>> {
-    let Ok(db) = db_pool.get().await else {
+pub async fn list_directories(pool: &Pool, bucket_id: &str) -> Result<Vec<Directory>> {
+    let Ok(db) = pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
@@ -40,11 +40,11 @@ pub async fn list_directories(db_pool: Pool, bucket_id: &str) -> Result<Vec<Dire
 }
 
 pub async fn create_directory(
-    db_pool: Pool,
+    pool: &Pool,
     bucket_id: &str,
-    data: NewDirectory,
+    data: &NewDirectory,
 ) -> Result<Directory> {
-    let Ok(db) = db_pool.get().await else {
+    let Ok(db) = pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
@@ -53,8 +53,8 @@ pub async fn create_directory(
         id: generate_id(),
         dir_type: "files".to_string(),
         bucket_id: bucket_id.to_string(),
-        name: data.name,
-        label: data.label,
+        name: data.name.clone(),
+        label: data.label.clone(),
         file_count: 0,
         created_at: today,
         updated_at: today,
@@ -84,8 +84,8 @@ pub async fn create_directory(
     }
 }
 
-pub async fn get_directory(db_pool: Pool, id: &str) -> Result<Option<Directory>> {
-    let Ok(db) = db_pool.get().await else {
+pub async fn get_directory(pool: &Pool, id: &str) -> Result<Option<Directory>> {
+    let Ok(db) = pool.get().await else {
         return Err("Error getting db connection".into());
     };
 

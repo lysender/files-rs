@@ -8,7 +8,7 @@ use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{info, Level};
 
 use crate::config::Config;
-use crate::db::connection::create_pool;
+use crate::db::conn::create_pool;
 use crate::web::routes::all_routes;
 use crate::Result;
 

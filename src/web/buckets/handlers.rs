@@ -39,10 +39,7 @@ pub async fn create_bucket_handler(
     State(state): State<AppState>,
     Json(payload): Json<NewBucket>,
 ) -> Response<Body> {
-    let config = state.config.clone();
-    let client_id = config.client_id.clone();
-
-    let bucket_res = create_bucket(&state.db_pool, client_id.as_str(), payload).await;
+    let bucket_res = create_bucket(&state.db_pool, &state.config.client_id, &payload).await;
     match bucket_res {
         Ok(bucket) => create_response(StatusCode::CREATED, serde_json::to_string(&bucket).unwrap()),
         Err(error) => to_error_response(error),
@@ -60,11 +57,11 @@ pub async fn update_bucket_handler(
     Path(bucket_id): Path<String>,
     Json(payload): Json<UpdateBucket>,
 ) -> Response<Body> {
-    let bucket_res = update_bucket(&state.db_pool, bucket_id.as_str(), &payload).await;
+    let bucket_res = update_bucket(&state.db_pool, &bucket_id, &payload).await;
     match bucket_res {
         Ok(updated) => {
             if updated {
-                get_bucket_as_response(&state, bucket_id.as_str()).await
+                get_bucket_as_response(&state, &bucket_id).await
             } else {
                 // Just send back the original bucket
                 create_success_response(serde_json::to_string(&bucket).unwrap())
@@ -99,7 +96,7 @@ pub async fn delete_bucket_handler(
     State(state): State<AppState>,
     Path(bucket_id): Path<String>,
 ) -> Response<Body> {
-    let bucket_res = delete_bucket(&state.db_pool, bucket_id.as_str()).await;
+    let bucket_res = delete_bucket(&state.db_pool, &bucket_id).await;
     match bucket_res {
         Ok(_) => create_response(StatusCode::NO_CONTENT, "".to_string()),
         Err(error) => to_error_response(error),

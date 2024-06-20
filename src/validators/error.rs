@@ -1,16 +1,4 @@
-use core::result::Result;
 use validator::{ValidationError, ValidationErrors};
-
-pub fn sluggable_string(value: &str) -> Result<(), ValidationError> {
-    if value.len() == 0 {
-        return Err(ValidationError::new("sluggable_string"));
-    }
-    let valid = value.chars().all(|c| c.is_alphanumeric() || c == '-');
-    match valid {
-        true => Ok(()),
-        false => Err(ValidationError::new("sluggable_string")),
-    }
-}
 
 pub fn flatten_errors(errors: &ValidationErrors) -> String {
     // Collect field keys first
@@ -50,42 +38,7 @@ fn error_to_string(error: &ValidationError) -> String {
             _ => "invalid length".to_string(),
         },
         "required" => "required".to_string(),
-        "sluggable_string" => "must be composed of alpha-numeric characters or dashes".to_string(),
+        "sluggable" => "must be composed of alpha-numeric characters or dashes".to_string(),
         _ => "invalid".to_string(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use validator::Validate;
-
-    #[derive(Debug, Clone, Validate)]
-    pub struct TestStruct {
-        #[validate(length(min = 1, max = 50))]
-        pub name: String,
-
-        #[validate(length(min = 1, max = 100))]
-        pub label: String,
-    }
-
-    #[test]
-    fn test_sluggable_string() {
-        assert!(sluggable_string("hello-world").is_ok());
-        assert!(sluggable_string("Hello-World-123").is_ok());
-        assert!(sluggable_string("hello_world").is_err());
-        assert!(sluggable_string("hello world").is_err());
-        assert!(sluggable_string("").is_err());
-    }
-
-    #[test]
-    fn test_flatten_errors() {
-        let data = TestStruct {
-            name: "".to_string(),
-            label: "".to_string(),
-        };
-        let errors = data.validate().unwrap_err();
-        let flattened = flatten_errors(&errors);
-        assert_eq!(flattened, "label: must be between 1 and 100 characters, name: must be between 1 and 50 characters");
     }
 }

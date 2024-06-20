@@ -6,10 +6,10 @@ use diesel::{QueryDsl, SelectableHelper};
 use tracing::error;
 use validator::Validate;
 
-use crate::files::models::validators::flatten_errors;
 use crate::files::models::{Bucket, NewBucket, UpdateBucket};
 use crate::schema::buckets::{self, dsl};
-use crate::uuid::generate_id;
+use crate::util::generate_id;
+use crate::validators::flatten_errors;
 use crate::{Error, Result};
 
 pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Vec<Bucket>> {
@@ -43,7 +43,7 @@ pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Vec<Bucket>
     }
 }
 
-pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: NewBucket) -> Result<Bucket> {
+pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) -> Result<Bucket> {
     if let Err(errors) = data.validate() {
         return Err(Error::ValidationError(flatten_errors(&errors)));
     }
@@ -71,11 +71,12 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: NewBucket) -> 
         ));
     }
 
+    let data_copy = data.clone();
     let bucket = Bucket {
         id: generate_id(),
         client_id: client_id.to_string(),
-        name: data.name,
-        label: data.label,
+        name: data_copy.name,
+        label: data_copy.label,
     };
 
     let bucket_copy = bucket.clone();

@@ -1,2 +1,2 @@
-pub mod buckets;
-pub mod directories;
+pub mod bucket;
+pub mod directory;

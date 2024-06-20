@@ -18,10 +18,7 @@ pub async fn dir_middleware(
     Path(dir_id): Path<String>,
     next: Next,
 ) -> Response<Body> {
-    let pool = state.db_pool.clone();
-    let bid = bucket_id.clone();
-    let did = dir_id.clone();
-    let query_res = get_directory(pool, did.as_str()).await;
+    let query_res = get_directory(&state.db_pool, dir_id.as_str()).await;
     let Ok(dir_res) = query_res else {
         return create_error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -38,7 +35,7 @@ pub async fn dir_middleware(
         );
     };
 
-    if dir.bucket_id != bid {
+    if dir.bucket_id != bucket_id {
         return create_error_response(
             StatusCode::NOT_FOUND,
             "Directory not found".to_string(),

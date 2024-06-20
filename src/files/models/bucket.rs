@@ -15,7 +15,7 @@ pub struct Bucket {
 #[derive(Debug, Clone, Deserialize, Validate)]
 pub struct NewBucket {
     #[validate(length(min = 1, max = 50))]
-    #[validate(custom(function = "crate::files::models::validators::sluggable_string"))]
+    #[validate(custom(function = "crate::validators::sluggable"))]
     pub name: String,
 
     #[validate(length(min = 1, max = 100))]

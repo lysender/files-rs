@@ -12,7 +12,8 @@ mod db;
 mod error;
 mod files;
 mod schema;
-mod uuid;
+mod util;
+mod validators;
 mod web;
 
 // Re-export error types for convenience

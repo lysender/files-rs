@@ -1,5 +1,5 @@
 #[derive(Debug, Clone)]
-pub struct Client {
+pub struct ApiClient {
     pub id: String,
     pub name: String,
 }
