@@ -1,0 +1,1 @@
+DROP INDEX buckets_client_id_name_idx;
