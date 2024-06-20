@@ -1,5 +1,6 @@
 use deadpool_diesel::sqlite::Pool;
 
+use diesel::dsl::{count, count_star};
 use diesel::prelude::*;
 use diesel::{QueryDsl, SelectableHelper};
 use tracing::error;
@@ -49,6 +50,18 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: NewBucket) -> 
 
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
+    };
+
+    // Limit the number of buckets per client
+    let _ = match count_client_buckets(db_pool, client_id).await {
+        Ok(count) => {
+            if count >= 10 {
+                return Err(Error::ValidationError(
+                    "Maximum number of buckets reached".to_string(),
+                ));
+            }
+        }
+        Err(e) => return Err(e),
     };
 
     // Bucket name must be unique for the client
@@ -148,6 +161,36 @@ pub async fn find_client_bucket(
             Err(e) => {
                 error!("{}", e);
                 Err("Error finding bucket".into())
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            Err("Error using the db connection".into())
+        }
+    }
+}
+
+pub async fn count_client_buckets(db_pool: &Pool, client_id: &str) -> Result<i64> {
+    let Ok(db) = db_pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+
+    let cid = client_id.to_string();
+    let conn_result = db
+        .interact(move |conn| {
+            dsl::buckets
+                .filter(dsl::client_id.eq(cid.as_str()))
+                .select(count_star())
+                .get_result::<i64>(conn)
+        })
+        .await;
+
+    match conn_result {
+        Ok(count_res) => match count_res {
+            Ok(count) => Ok(count),
+            Err(e) => {
+                error!("{}", e);
+                Err("Error counting buckets".into())
             }
         },
         Err(e) => {
