@@ -22,6 +22,7 @@ pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Vec<Bucket>
             dsl::buckets
                 .filter(dsl::client_id.eq(cid))
                 .select(Bucket::as_select())
+                .order(dsl::label.asc())
                 .load::<Bucket>(conn)
         })
         .await;
@@ -52,7 +53,9 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: NewBucket) -> 
 
     // Bucket name must be unique for the client
     if let Some(_) = find_client_bucket(db_pool, client_id, data.name.as_str()).await? {
-        return Err("Bucket name already exists".into());
+        return Err(Error::ValidationError(
+            "Bucket name already exists".to_string(),
+        ));
     }
 
     let bucket = Bucket {
