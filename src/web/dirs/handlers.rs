@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    extract::{rejection::JsonRejection, Json, Path, State},
+    extract::{Json, Path, State},
     http::StatusCode,
     response::Response,
     Extension,
@@ -39,9 +39,16 @@ pub async fn list_dirs_handler(
 pub async fn create_dir_handler(
     State(state): State<AppState>,
     Path(bucket_id): Path<String>,
-    Json(payload): Json<NewDir>,
+    payload: Option<Json<NewDir>>,
 ) -> Response<Body> {
-    let res = create_dir(&state.db_pool, &bucket_id, &payload).await;
+    let Some(data) = payload else {
+        return create_error_response(
+            StatusCode::BAD_REQUEST,
+            "Invalid request payload".to_string(),
+            "Bad Request".to_string(),
+        );
+    };
+    let res = create_dir(&state.db_pool, &bucket_id, &data).await;
     match res {
         Ok(dir) => create_response(StatusCode::CREATED, serde_json::to_string(&dir).unwrap()),
         Err(error) => to_error_response(error),

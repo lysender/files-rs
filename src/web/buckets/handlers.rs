@@ -34,9 +34,16 @@ pub async fn list_buckets_handler(State(state): State<AppState>) -> Response<Bod
 
 pub async fn create_bucket_handler(
     State(state): State<AppState>,
-    Json(payload): Json<NewBucket>,
+    payload: Option<Json<NewBucket>>,
 ) -> Response<Body> {
-    let res = create_bucket(&state.db_pool, &state.config.client_id, &payload).await;
+    let Some(data) = payload else {
+        return create_error_response(
+            StatusCode::BAD_REQUEST,
+            "Invalid request payload".to_string(),
+            "Bad Request".to_string(),
+        );
+    };
+    let res = create_bucket(&state.db_pool, &state.config.client_id, &data).await;
     match res {
         Ok(bucket) => create_response(StatusCode::CREATED, serde_json::to_string(&bucket).unwrap()),
         Err(error) => to_error_response(error),
@@ -52,9 +59,16 @@ pub async fn update_bucket_handler(
     State(state): State<AppState>,
     Extension(bucket): Extension<Bucket>,
     Path(bucket_id): Path<String>,
-    Json(payload): Json<UpdateBucket>,
+    payload: Option<Json<UpdateBucket>>,
 ) -> Response<Body> {
-    let res = update_bucket(&state.db_pool, &bucket_id, &payload).await;
+    let Some(data) = payload else {
+        return create_error_response(
+            StatusCode::BAD_REQUEST,
+            "Invalid request payload".to_string(),
+            "Bad Request".to_string(),
+        );
+    };
+    let res = update_bucket(&state.db_pool, &bucket_id, &data).await;
     match res {
         Ok(updated) => {
             if updated {
