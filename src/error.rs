@@ -1,4 +1,10 @@
+use axum::{
+    body::Body,
+    response::{IntoResponse, Response},
+};
 use derive_more::From;
+
+use crate::web::response::{to_error_response, JsonResponse};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -19,7 +25,7 @@ impl From<&str> for Error {
     }
 }
 
-// Allow AnyError to be displayed
+// Allow errors to be displayed as string
 impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
@@ -27,5 +33,12 @@ impl core::fmt::Display for Error {
             Self::ValidationError(val) => write!(f, "{}", val),
             Self::NotFound(val) => write!(f, "{}", val),
         }
+    }
+}
+
+// Allow errors to be rendered as response
+impl IntoResponse for Error {
+    fn into_response(self) -> Response<Body> {
+        to_error_response(self)
     }
 }

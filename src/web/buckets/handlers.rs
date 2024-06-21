@@ -14,22 +14,20 @@ use crate::{
     web::{
         response::{
             create_error_response, create_response, create_success_response, to_error_response,
+            JsonResponse,
         },
         server::AppState,
     },
+    Result,
 };
 
-pub async fn list_buckets_handler(State(state): State<AppState>) -> Response<Body> {
+pub async fn list_buckets_handler(State(state): State<AppState>) -> Result<JsonResponse> {
     let res = list_buckets(&state.db_pool, &state.config.client_id).await;
     let Ok(buckets) = res else {
-        return create_error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to list buckets".to_string(),
-            "Internal Server Error".to_string(),
-        );
+        return Err("Failed to list buckets".into());
     };
 
-    create_success_response(serde_json::to_string(&buckets).unwrap())
+    Ok(JsonResponse::new(serde_json::to_string(&buckets).unwrap()))
 }
 
 pub async fn create_bucket_handler(
