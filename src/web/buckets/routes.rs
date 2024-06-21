@@ -15,17 +15,23 @@ use super::handlers::{
 
 pub fn buckets_routes(state: AppState) -> Router<AppState> {
     Router::new()
-        .route("/", get(list_buckets_handler).post(create_bucket_handler))
-        .nest("/:bucket_id", inner_bucket_routes(state.clone()))
+        .route(
+            "/v1/buckets",
+            get(list_buckets_handler).post(create_bucket_handler),
+        )
+        .merge(inner_bucket_routes(state.clone()))
         .with_state(state)
 }
 
 fn inner_bucket_routes(state: AppState) -> Router<AppState> {
     Router::new()
-        .route("/", get(get_bucket_handler))
-        .route("/", patch(update_bucket_handler))
-        .route("/", delete(delete_bucket_handler))
-        .nest("/dirs", dir_routes(state.clone()))
+        .route(
+            "/v1/buckets/:bucket_id",
+            get(get_bucket_handler)
+                .patch(update_bucket_handler)
+                .delete(delete_bucket_handler),
+        )
+        .merge(dir_routes(state.clone()))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             bucket_middleware,

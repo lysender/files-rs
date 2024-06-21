@@ -4,18 +4,16 @@ use axum::{
     http::StatusCode,
     middleware::Next,
     response::Response,
-    Extension,
 };
 
 use crate::{
-    files::{models::Bucket, queries::dirs::get_dir},
+    files::queries::dirs::get_dir,
     web::{response::create_error_response, server::AppState},
 };
 
 pub async fn dir_middleware(
     state: State<AppState>,
-    Extension(bucket): Extension<Bucket>,
-    Path(dir_id): Path<String>,
+    Path((bucket_id, dir_id)): Path<(String, String)>,
     mut request: Request,
     next: Next,
 ) -> Response<Body> {
@@ -36,7 +34,7 @@ pub async fn dir_middleware(
         );
     };
 
-    if dir.bucket_id != bucket.id.clone() {
+    if dir.bucket_id != bucket_id.clone() {
         return create_error_response(
             StatusCode::NOT_FOUND,
             "Directory not found".to_string(),

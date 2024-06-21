@@ -43,18 +43,42 @@ pub async fn list_dirs(pool: &Pool, bucket_id: &str) -> Result<Vec<Dir>> {
     }
 }
 
-pub async fn create_dir(pool: &Pool, bucket_id: &str, data: &NewDir) -> Result<Dir> {
-    let Ok(db) = pool.get().await else {
+pub async fn create_dir(db_pool: &Pool, bucket_id: &str, data: &NewDir) -> Result<Dir> {
+    if let Err(errors) = data.validate() {
+        return Err(Error::ValidationError(flatten_errors(&errors)));
+    }
+
+    let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
+    // Limit the number of directories per bucket
+    let _ = match count_bucket_dirs(db_pool, bucket_id).await {
+        Ok(count) => {
+            if count >= 10 {
+                return Err(Error::ValidationError(
+                    "Maximum number of dirs reached".to_string(),
+                ));
+            }
+        }
+        Err(e) => return Err(e),
+    };
+
+    // Directory name must be unique for the bucket
+    if let Some(_) = find_bucket_dir(db_pool, bucket_id, data.name.as_str()).await? {
+        return Err(Error::ValidationError(
+            "Directory name already exists".to_string(),
+        ));
+    }
+
+    let data_copy = data.clone();
     let today = chrono::Utc::now().timestamp();
     let dir = Dir {
         id: generate_id(),
         dir_type: "files".to_string(),
         bucket_id: bucket_id.to_string(),
-        name: data.name.clone(),
-        label: data.label.clone(),
+        name: data_copy.name,
+        label: data_copy.label,
         file_count: 0,
         created_at: today,
         updated_at: today,
@@ -73,12 +97,12 @@ pub async fn create_dir(pool: &Pool, bucket_id: &str, data: &NewDir) -> Result<D
         Ok(insert_res) => match insert_res {
             Ok(_) => Ok(dir),
             Err(e) => {
-                error!("{e}");
+                error!("{}", e);
                 Err("Error creating a directory".into())
             }
         },
         Err(e) => {
-            error!("{e}");
+            error!("{}", e);
             Err("Error using the db connection".into())
         }
     }
