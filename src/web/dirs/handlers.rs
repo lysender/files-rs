@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    extract::{Json, Path, State},
+    extract::{rejection::JsonRejection, Json, Path, State},
     http::StatusCode,
     response::Response,
     Extension,
@@ -12,6 +12,7 @@ use crate::{
         queries::dirs::{create_dir, delete_dir, get_dir, list_dirs, update_dir},
     },
     web::{
+        params::Params,
         response::{
             create_error_response, create_response, create_success_response, to_error_response,
         },
@@ -55,10 +56,19 @@ pub async fn get_dir_handler(Extension(dir): Extension<Dir>) -> Response<Body> {
 pub async fn update_dir_handler(
     State(state): State<AppState>,
     Extension(dir): Extension<Dir>,
-    Path(dir_id): Path<String>,
-    Json(payload): Json<UpdateDir>,
+    Path(params): Path<Params>,
+    payload: Option<Json<UpdateDir>>,
 ) -> Response<Body> {
-    let res = update_dir(&state.db_pool, &dir_id, &payload).await;
+    let dir_id = params.dir_id.clone().expect("dir_id is required");
+    let Some(data) = payload else {
+        return create_error_response(
+            StatusCode::BAD_REQUEST,
+            "Invalid request payload".to_string(),
+            "Bad Request".to_string(),
+        );
+    };
+
+    let res = update_dir(&state.db_pool, &dir_id, &data).await;
     match res {
         Ok(updated) => {
             if updated {
