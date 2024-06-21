@@ -4,6 +4,7 @@ pub mod error;
 pub mod home;
 pub mod middlewares;
 pub mod not_found;
+pub mod pagination;
 pub mod params;
 pub mod response;
 pub mod routes;

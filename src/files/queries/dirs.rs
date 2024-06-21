@@ -10,11 +10,12 @@ use crate::files::models::{Dir, NewDir, UpdateDir};
 use crate::schema::directories::{self, dsl};
 use crate::util::generate_id;
 use crate::validators::flatten_errors;
+use crate::web::pagination::Paginated;
 use crate::{Error, Result};
 
 const MAX_DIRS: i64 = 1000;
 
-pub async fn list_dirs(pool: &Pool, bucket_id: &str) -> Result<Vec<Dir>> {
+pub async fn list_dirs(pool: &Pool, bucket_id: &str) -> Result<Paginated<Dir>> {
     let Ok(db) = pool.get().await else {
         return Err("Error getting db connection".into());
     };
@@ -32,7 +33,10 @@ pub async fn list_dirs(pool: &Pool, bucket_id: &str) -> Result<Vec<Dir>> {
 
     match conn_result {
         Ok(select_res) => match select_res {
-            Ok(items) => Ok(items),
+            Ok(items) => {
+                let total = items.len() as i32;
+                Ok(Paginated::new(items, 1, 50, total))
+            }
             Err(e) => {
                 error!("{e}");
                 Err("Error reading directories".into())

@@ -10,13 +10,14 @@ use crate::files::models::{Bucket, NewBucket, UpdateBucket};
 use crate::schema::buckets::{self, dsl};
 use crate::util::generate_id;
 use crate::validators::flatten_errors;
+use crate::web::pagination::Paginated;
 use crate::{Error, Result};
 
 use super::dirs::count_bucket_dirs;
 
 const MAX_BUCKETS: i64 = 10;
 
-pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Vec<Bucket>> {
+pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Paginated<Bucket>> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
@@ -34,7 +35,10 @@ pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Vec<Bucket>
 
     match conn_result {
         Ok(select_res) => match select_res {
-            Ok(items) => Ok(items),
+            Ok(items) => {
+                let total = items.len() as i32;
+                Ok(Paginated::new(items, 1, 10, total))
+            }
             Err(e) => {
                 error!("{}", e);
                 Err("Error reading buckets".into())
