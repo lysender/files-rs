@@ -10,7 +10,7 @@ use super::{buckets::routes::buckets_routes, home::home_handler, not_found::not_
 pub fn all_routes(state: AppState) -> Router {
     Router::new()
         .route("/", get(home_handler))
-        .merge(buckets_routes(state.clone()))
+        .nest("/v1/buckets", buckets_routes(state.clone()))
         .fallback(any(not_found_handler))
         .with_state(state)
 }

@@ -8,18 +8,15 @@ use super::handlers::{
 
 pub fn dir_routes(state: AppState) -> Router<AppState> {
     Router::new()
-        .route(
-            "/v1/buckets/:bucket_id/dirs",
-            get(list_dirs_handler).post(create_dir_handler),
-        )
-        .merge(inner_dir_routes(state.clone()))
+        .route("/", get(list_dirs_handler).post(create_dir_handler))
+        .nest("/:dir_id", inner_dir_routes(state.clone()))
         .with_state(state)
 }
 
 fn inner_dir_routes(state: AppState) -> Router<AppState> {
     Router::new()
         .route(
-            "/v1/buckets/:bucket_id/dirs/:dir_id",
+            "/",
             get(get_dir_handler)
                 .patch(update_dir_handler)
                 .delete(delete_dir_handler),
