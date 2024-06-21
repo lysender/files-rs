@@ -9,16 +9,16 @@ use axum::{
 use crate::{
     files::queries::buckets::get_bucket,
     util::valid_id,
-    web::{response::create_error_response, server::AppState},
+    web::{params::Params, response::create_error_response, server::AppState},
 };
 
 pub async fn bucket_middleware(
     State(state): State<AppState>,
-    Path(bucket_id): Path<String>,
+    Path(params): Path<Params>,
     mut request: Request,
     next: Next,
 ) -> Response<Body> {
-    if !valid_id(bucket_id.as_str()) {
+    if !valid_id(&params.bucket_id) {
         return create_error_response(
             StatusCode::BAD_REQUEST,
             "Invalid bucket id".to_string(),
@@ -26,7 +26,7 @@ pub async fn bucket_middleware(
         );
     }
 
-    let query_res = get_bucket(&state.db_pool, bucket_id.as_str()).await;
+    let query_res = get_bucket(&state.db_pool, &params.bucket_id).await;
     let Ok(bucket_res) = query_res else {
         return create_error_response(
             StatusCode::INTERNAL_SERVER_ERROR,

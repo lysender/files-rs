@@ -8,16 +8,17 @@ use axum::{
 
 use crate::{
     files::queries::dirs::get_dir,
-    web::{response::create_error_response, server::AppState},
+    web::{params::Params, response::create_error_response, server::AppState},
 };
 
 pub async fn dir_middleware(
     state: State<AppState>,
-    Path((bucket_id, dir_id)): Path<(String, String)>,
+    Path(params): Path<Params>,
     mut request: Request,
     next: Next,
 ) -> Response<Body> {
-    let query_res = get_dir(&state.db_pool, dir_id.as_str()).await;
+    let did = params.dir_id.clone().expect("dir_id is required");
+    let query_res = get_dir(&state.db_pool, &did).await;
     let Ok(dir_res) = query_res else {
         return create_error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -34,7 +35,7 @@ pub async fn dir_middleware(
         );
     };
 
-    if dir.bucket_id != bucket_id.clone() {
+    if dir.bucket_id != params.bucket_id.clone() {
         return create_error_response(
             StatusCode::NOT_FOUND,
             "Directory not found".to_string(),
