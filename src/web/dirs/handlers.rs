@@ -112,8 +112,9 @@ async fn get_dir_as_response(state: &AppState, id: &str) -> Response<Body> {
 
 pub async fn delete_dir_handler(
     State(state): State<AppState>,
-    Path(dir_id): Path<String>,
+    Path(params): Path<Params>,
 ) -> Response<Body> {
+    let dir_id = params.dir_id.clone().expect("dir_id is required");
     let res = delete_dir(&state.db_pool, &dir_id).await;
     match res {
         Ok(_) => create_response(StatusCode::NO_CONTENT, "".to_string()),
