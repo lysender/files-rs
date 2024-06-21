@@ -62,6 +62,9 @@ pub fn to_error_response(error: Error) -> Response<Body> {
             message,
             "Internal Server Error".to_string(),
         ),
+        Error::BadRequest(message) => {
+            create_error_response(StatusCode::BAD_REQUEST, message, "Bad Request".to_string())
+        }
         Error::ValidationError(message) => {
             create_error_response(StatusCode::BAD_REQUEST, message, "Bad Request".to_string())
         }

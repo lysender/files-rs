@@ -4,7 +4,7 @@ use axum::{
 };
 use derive_more::From;
 
-use crate::web::response::{to_error_response, JsonResponse};
+use crate::web::response::to_error_response;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -12,9 +12,8 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
     #[from]
     AnyError(String),
-
+    BadRequest(String),
     ValidationError(String),
-
     NotFound(String),
 }
 
@@ -30,6 +29,7 @@ impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             Self::AnyError(val) => write!(f, "{}", val),
+            Self::BadRequest(val) => write!(f, "{}", val),
             Self::ValidationError(val) => write!(f, "{}", val),
             Self::NotFound(val) => write!(f, "{}", val),
         }

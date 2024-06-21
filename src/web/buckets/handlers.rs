@@ -33,19 +33,17 @@ pub async fn list_buckets_handler(State(state): State<AppState>) -> Result<JsonR
 pub async fn create_bucket_handler(
     State(state): State<AppState>,
     payload: Option<Json<NewBucket>>,
-) -> Response<Body> {
+) -> Result<JsonResponse> {
     let Some(data) = payload else {
-        return create_error_response(
-            StatusCode::BAD_REQUEST,
+        return Err(crate::Error::BadRequest(
             "Invalid request payload".to_string(),
-            "Bad Request".to_string(),
-        );
+        ));
     };
-    let res = create_bucket(&state.db_pool, &state.config.client_id, &data).await;
-    match res {
-        Ok(bucket) => create_response(StatusCode::CREATED, serde_json::to_string(&bucket).unwrap()),
-        Err(error) => to_error_response(error),
-    }
+    let bucket = create_bucket(&state.db_pool, &state.config.client_id, &data).await?;
+    Ok(JsonResponse::with_status(
+        StatusCode::CREATED,
+        serde_json::to_string(&bucket).unwrap(),
+    ))
 }
 
 pub async fn get_bucket_handler(Extension(bucket): Extension<Bucket>) -> Response<Body> {
