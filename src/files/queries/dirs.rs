@@ -12,6 +12,8 @@ use crate::util::generate_id;
 use crate::validators::flatten_errors;
 use crate::{Error, Result};
 
+const MAX_DIRS: i64 = 1000;
+
 pub async fn list_dirs(pool: &Pool, bucket_id: &str) -> Result<Vec<Dir>> {
     let Ok(db) = pool.get().await else {
         return Err("Error getting db connection".into());
@@ -55,7 +57,7 @@ pub async fn create_dir(db_pool: &Pool, bucket_id: &str, data: &NewDir) -> Resul
     // Limit the number of directories per bucket
     let _ = match count_bucket_dirs(db_pool, bucket_id).await {
         Ok(count) => {
-            if count >= 10 {
+            if count >= MAX_DIRS {
                 return Err(Error::ValidationError(
                     "Maximum number of dirs reached".to_string(),
                 ));

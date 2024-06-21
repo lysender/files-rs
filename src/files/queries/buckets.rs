@@ -12,6 +12,10 @@ use crate::util::generate_id;
 use crate::validators::flatten_errors;
 use crate::{Error, Result};
 
+use super::dirs::count_bucket_dirs;
+
+const MAX_BUCKETS: i64 = 10;
+
 pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Vec<Bucket>> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
@@ -55,7 +59,7 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) ->
     // Limit the number of buckets per client
     let _ = match count_client_buckets(db_pool, client_id).await {
         Ok(count) => {
-            if count >= 10 {
+            if count >= MAX_BUCKETS {
                 return Err(Error::ValidationError(
                     "Maximum number of buckets reached".to_string(),
                 ));
@@ -245,6 +249,14 @@ pub async fn delete_bucket(db_pool: &Pool, id: &str) -> Result<()> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
+
+    // Do not delete if there are still directories inside
+    let dir_count = count_bucket_dirs(db_pool, id).await?;
+    if dir_count > 0 {
+        return Err(Error::ValidationError(
+            "Cannot delete bucket with directories inside".to_string(),
+        ));
+    }
 
     let bucket_id = id.to_string();
     let conn_result = db
