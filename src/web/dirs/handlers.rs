@@ -1,8 +1,6 @@
 use axum::{
-    body::Body,
     extract::{Json, Path, State},
     http::StatusCode,
-    response::Response,
     Extension,
 };
 
@@ -11,53 +9,36 @@ use crate::{
         models::{Dir, NewDir, UpdateDir},
         queries::dirs::{create_dir, delete_dir, get_dir, list_dirs, update_dir},
     },
-    web::{
-        params::Params,
-        response::{
-            create_error_response, create_response, create_success_response, to_error_response,
-        },
-        server::AppState,
-    },
+    web::{params::Params, response::JsonResponse, server::AppState},
+    Error, Result,
 };
 
 pub async fn list_dirs_handler(
     State(state): State<AppState>,
     Path(bucket_id): Path<String>,
-) -> Response<Body> {
-    let res = list_dirs(&state.db_pool, &bucket_id).await;
-    let Ok(dirs) = res else {
-        return create_error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to list directories".to_string(),
-            "Internal Server Error".to_string(),
-        );
-    };
-
-    create_success_response(serde_json::to_string(&dirs).unwrap())
+) -> Result<JsonResponse> {
+    let dirs = list_dirs(&state.db_pool, &bucket_id).await?;
+    Ok(JsonResponse::new(serde_json::to_string(&dirs).unwrap()))
 }
 
 pub async fn create_dir_handler(
     State(state): State<AppState>,
     Path(bucket_id): Path<String>,
     payload: Option<Json<NewDir>>,
-) -> Response<Body> {
+) -> Result<JsonResponse> {
     let Some(data) = payload else {
-        return create_error_response(
-            StatusCode::BAD_REQUEST,
-            "Invalid request payload".to_string(),
-            "Bad Request".to_string(),
-        );
+        return Err(Error::BadRequest("Invalid request payload".to_string()));
     };
-    let res = create_dir(&state.db_pool, &bucket_id, &data).await;
-    match res {
-        Ok(dir) => create_response(StatusCode::CREATED, serde_json::to_string(&dir).unwrap()),
-        Err(error) => to_error_response(error),
-    }
+    let dir = create_dir(&state.db_pool, &bucket_id, &data).await?;
+    Ok(JsonResponse::with_status(
+        StatusCode::CREATED,
+        serde_json::to_string(&dir).unwrap(),
+    ))
 }
 
-pub async fn get_dir_handler(Extension(dir): Extension<Dir>) -> Response<Body> {
+pub async fn get_dir_handler(Extension(dir): Extension<Dir>) -> Result<JsonResponse> {
     // Extract dir from the middleware extension
-    return create_success_response(serde_json::to_string(&dir).unwrap());
+    Ok(JsonResponse::new(serde_json::to_string(&dir).unwrap()))
 }
 
 pub async fn update_dir_handler(
@@ -65,59 +46,42 @@ pub async fn update_dir_handler(
     Extension(dir): Extension<Dir>,
     Path(params): Path<Params>,
     payload: Option<Json<UpdateDir>>,
-) -> Response<Body> {
+) -> Result<JsonResponse> {
     let dir_id = params.dir_id.clone().expect("dir_id is required");
     let Some(data) = payload else {
-        return create_error_response(
-            StatusCode::BAD_REQUEST,
-            "Invalid request payload".to_string(),
-            "Bad Request".to_string(),
-        );
+        return Err(Error::BadRequest("Invalid request payload".to_string()));
     };
 
-    let res = update_dir(&state.db_pool, &dir_id, &data).await;
-    match res {
-        Ok(updated) => {
-            if updated {
-                get_dir_as_response(&state, &dir_id).await
-            } else {
-                // Just send back the original dir
-                create_success_response(serde_json::to_string(&dir).unwrap())
-            }
-        }
-        Err(error) => to_error_response(error),
+    let updated = update_dir(&state.db_pool, &dir_id, &data).await?;
+
+    // Either return the updated dir or the original one
+    match updated {
+        true => get_dir_as_response(&state, &dir_id).await,
+        false => Ok(JsonResponse::new(serde_json::to_string(&dir).unwrap())),
     }
 }
 
-async fn get_dir_as_response(state: &AppState, id: &str) -> Response<Body> {
+async fn get_dir_as_response(state: &AppState, id: &str) -> Result<JsonResponse> {
     let res = get_dir(&state.db_pool, id).await;
     let Ok(dir_res) = res else {
-        return create_error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Error getting directory".to_string(),
-            "Internal Server Error".to_string(),
-        );
+        return Err("Error getting directory".into());
     };
 
     let Some(dir) = dir_res else {
-        return create_error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Error getting directory, directory not found".to_string(),
-            "Internal Server Error".to_string(),
-        );
+        return Err("Error getting directory this time".into());
     };
 
-    create_success_response(serde_json::to_string(&dir).unwrap())
+    Ok(JsonResponse::new(serde_json::to_string(&dir).unwrap()))
 }
 
 pub async fn delete_dir_handler(
     State(state): State<AppState>,
     Path(params): Path<Params>,
-) -> Response<Body> {
+) -> Result<JsonResponse> {
     let dir_id = params.dir_id.clone().expect("dir_id is required");
-    let res = delete_dir(&state.db_pool, &dir_id).await;
-    match res {
-        Ok(_) => create_response(StatusCode::NO_CONTENT, "".to_string()),
-        Err(error) => to_error_response(error),
-    }
+    let _ = delete_dir(&state.db_pool, &dir_id).await?;
+    Ok(JsonResponse::with_status(
+        StatusCode::NO_CONTENT,
+        "".to_string(),
+    ))
 }
