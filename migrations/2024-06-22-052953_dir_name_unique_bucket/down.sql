@@ -1,0 +1,1 @@
+DROP INDEX directories_bucket_id_name_idx;
