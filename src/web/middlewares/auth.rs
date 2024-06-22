@@ -1,15 +1,15 @@
 use axum::{
     body::Body,
-    extract::{Path, Request, State},
-    http::StatusCode,
+    extract::{Request, State},
+    http::header,
     middleware::Next,
     response::Response,
 };
 
 use crate::{
-    files::queries::buckets::get_bucket,
-    util::valid_id,
-    web::{params::Params, response::create_error_response, server::AppState},
+    auth::token::verify_auth_token,
+    web::{response::to_error_response, server::AppState},
+    Error,
 };
 
 pub async fn auth_middleware(
@@ -17,33 +17,32 @@ pub async fn auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Response<Body> {
-    if !valid_id(&params.bucket_id) {
-        return create_error_response(
-            StatusCode::BAD_REQUEST,
-            "Invalid bucket id".to_string(),
-            "Bad Request".to_string(),
-        );
+    let auth_header = request
+        .headers()
+        .get(header::AUTHORIZATION)
+        .and_then(|header| header.to_str().ok());
+
+    let Some(auth_header) = auth_header else {
+        return to_error_response(Error::NoAuthToken);
+    };
+
+    if !auth_header.starts_with("Bearer ") {
+        return to_error_response(Error::InvalidAuthToken);
     }
 
-    let query_res = get_bucket(&state.db_pool, &params.bucket_id).await;
-    let Ok(bucket_res) = query_res else {
-        return create_error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Error getting bucket".to_string(),
-            "Internal Server Error".to_string(),
-        );
+    // Validate the token
+    let token = auth_header.replace("Bearer ", "");
+    let Ok(actor) = verify_auth_token(&token, &state.config.jwt_secret) else {
+        return to_error_response(Error::InvalidAuthToken);
     };
 
-    let Some(bucket) = bucket_res else {
-        return create_error_response(
-            StatusCode::NOT_FOUND,
-            "Bucket not found".to_string(),
-            "Not Found".to_string(),
-        );
-    };
+    // Actor id must be valid
+    if &actor.id != &state.config.client_id {
+        return to_error_response(Error::InvalidClient);
+    }
 
-    // Forward to the next middleware/handler passing the bucket information
-    request.extensions_mut().insert(bucket);
+    // Forward to the next middleware/handler passing the actor information
+    request.extensions_mut().insert(actor);
     let response = next.run(request).await;
     response
 }

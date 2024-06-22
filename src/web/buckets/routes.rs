@@ -1,7 +1,9 @@
 use axum::{middleware, routing::get, Router};
 
 use crate::web::{
-    dirs::routes::dir_routes, middlewares::bucket::bucket_middleware, server::AppState,
+    dirs::routes::dir_routes,
+    middlewares::{auth::auth_middleware, bucket::bucket_middleware},
+    server::AppState,
 };
 
 use super::handlers::{
@@ -13,6 +15,10 @@ pub fn buckets_routes(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/", get(list_buckets_handler).post(create_bucket_handler))
         .nest("/:bucket_id", inner_bucket_routes(state.clone()))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth_middleware,
+        ))
         .with_state(state)
 }
 

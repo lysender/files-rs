@@ -1,53 +1,54 @@
-use jwt_simple::prelude::*;
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
 use super::models::Actor;
 use crate::{Error, Result};
 
 #[derive(Debug, Deserialize, Serialize)]
-struct ActorClaims {
+struct Claims {
+    sub: String,
     scope: String,
+    exp: usize,
 }
 
 pub fn create_auth_token(actor: &Actor, secret: &str) -> Result<String> {
-    // For some reason, there are some miliseconds of drift between the server and the client
-    // Let's just add a 10 second delay to fix the issue
-    let now = Clock::now_since_epoch();
-    let drift = Duration::from_secs(10);
-
-    let key = HS256Key::from_bytes(secret.as_bytes());
-    let data = ActorClaims {
+    let claims = Claims {
+        sub: actor.id.clone(),
         scope: actor.scope.clone(),
+        exp: 1_619_007_000, // 2022-01-01
     };
 
-    let claims = Claims::with_custom_claims(data, Duration::from_days(7))
-        .invalid_before(now - drift)
-        .with_subject(&actor.id);
+    let Ok(token) = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_bytes()),
+    ) else {
+        return Err("Error creating JWT token".into());
+    };
 
-    match key.authenticate(claims) {
-        Ok(token) => Ok(token),
-        Err(e) => Err(format!("Error creating token: {}", e).into()),
-    }
+    Ok(token)
 }
 
 pub fn verify_auth_token(token: &str, secret: &str) -> Result<Actor> {
-    let key = HS256Key::from_bytes(secret.as_bytes());
-    let Ok(claims) = key.verify_token::<ActorClaims>(&token, None) else {
+    let Ok(decoded) = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(secret.as_bytes()),
+        &Validation::default(),
+    ) else {
         return Err(Error::InvalidAuthToken);
     };
 
-    let Some(subject) = claims.subject else {
+    if decoded.claims.sub.len() == 0 {
         return Err(Error::InvalidAuthToken);
-    };
-
-    if claims.custom.scope.len() == 0 {
+    }
+    if decoded.claims.scope.len() == 0 {
         return Err(Error::InvalidAuthToken);
     }
 
     Ok(Actor {
-        id: subject,
+        id: decoded.claims.sub,
         name: "client".to_string(),
-        scope: claims.custom.scope,
+        scope: decoded.claims.scope,
     })
 }
 

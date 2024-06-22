@@ -76,5 +76,15 @@ pub fn to_error_response(error: Error) -> Response<Body> {
             "Unauthorized".to_string(),
             "Unauthorized".to_string(),
         ),
+        Error::NoAuthToken => create_error_response(
+            StatusCode::UNAUTHORIZED,
+            "Unauthorized".to_string(),
+            "Unauthorized".to_string(),
+        ),
+        Error::InvalidClient => create_error_response(
+            StatusCode::UNAUTHORIZED,
+            "Unauthorized".to_string(),
+            "Unauthorized".to_string(),
+        ),
     }
 }
