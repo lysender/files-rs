@@ -15,6 +15,7 @@ pub enum Error {
     BadRequest(String),
     ValidationError(String),
     NotFound(String),
+    InvalidAuthToken,
 }
 
 // Allow string slices to be converted to Error
@@ -32,6 +33,7 @@ impl core::fmt::Display for Error {
             Self::BadRequest(val) => write!(f, "{}", val),
             Self::ValidationError(val) => write!(f, "{}", val),
             Self::NotFound(val) => write!(f, "{}", val),
+            Self::InvalidAuthToken => write!(f, "Invalid auth token"),
         }
     }
 }

@@ -1,5 +1,6 @@
 #[derive(Debug, Clone)]
-pub struct ApiClient {
+pub struct Actor {
     pub id: String,
     pub name: String,
+    pub scope: String,
 }

@@ -71,5 +71,10 @@ pub fn to_error_response(error: Error) -> Response<Body> {
         Error::NotFound(message) => {
             create_error_response(StatusCode::NOT_FOUND, message, "Not Found".to_string())
         }
+        Error::InvalidAuthToken => create_error_response(
+            StatusCode::UNAUTHORIZED,
+            "Unauthorized".to_string(),
+            "Unauthorized".to_string(),
+        ),
     }
 }

@@ -26,6 +26,15 @@ Simple file storage service written in Rust
   - /bucket/contents/dir/sizes/thumbnail/dir/files
   - /bucket/contents/dir/sizes/large/dir/files
 
+## Authentication
+
+- Send Authorization header with the following data:
+  - Subject -> client_id
+  - Scope -> auth files
+  - Expires -> should not exceed 1 week
+- Validate authorization header using a middleware
+- Attach client info as request extension
+
 ## Models
 
 Client (don't need persistence for now):
