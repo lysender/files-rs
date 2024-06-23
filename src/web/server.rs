@@ -18,7 +18,7 @@ pub struct AppState {
     pub db_pool: Pool,
 }
 
-pub async fn run(config: Config) -> Result<()> {
+pub async fn run_web_server(config: Config) -> Result<()> {
     let port = config.server.port;
 
     let pool = create_pool();

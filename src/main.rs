@@ -1,16 +1,15 @@
 use clap::Parser;
 use config::Args;
-use config::Commands;
-use config::Config;
+use run::run_command;
 use std::process;
-
-use crate::web::server::run;
 
 mod auth;
 mod config;
 mod db;
 mod error;
 mod files;
+mod health;
+mod run;
 mod schema;
 mod util;
 mod validators;
@@ -32,33 +31,9 @@ async fn main() {
         .init();
 
     let args = Args::parse();
-    let config = Config::build().unwrap_or_else(|err| {
-        eprintln!("{err}");
-        process::exit(1);
-    });
 
-    if let Err(e) = run_command(args, config).await {
+    if let Err(e) = run_command(args).await {
         eprintln!("Application error: {e}");
         process::exit(1);
-    }
-}
-
-async fn run_command(args: Args, config: Config) -> Result<()> {
-    match args.command {
-        Commands::Server => match run(config).await {
-            Ok(_) => Ok(()),
-            Err(err) => {
-                eprintln!("{err}");
-                process::exit(1);
-            }
-        },
-        Commands::CheckHealth => {
-            println!("Checking health...");
-            Ok(())
-        }
-        Commands::GenerateLogin => {
-            println!("Generating login...");
-            Ok(())
-        }
     }
 }

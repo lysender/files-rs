@@ -33,6 +33,16 @@ Acquire auth tokens:
 - Return access token
 - Note: Just use a hardcoded username and password
 
+### Setup Admin User
+
+Run the following:
+```bash
+# Dev mode
+cargo run -- generate-login
+# Prod mode
+files-rs generate-login
+```
+
 Verifying authenticated requests:
 - Send Authorization header with the following data:
   - Subject -> client_id
