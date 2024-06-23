@@ -3,15 +3,11 @@ use dotenvy::dotenv;
 use serde::Deserialize;
 use std::env;
 
-use crate::{
-    util::{base64_decode, valid_id},
-    Result,
-};
+use crate::{util::valid_id, Result};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub client_id: String,
-    pub admin_hash: String,
     pub jwt_secret: String,
     pub server: ServerConfig,
     pub db: DbConfig,
@@ -33,7 +29,6 @@ impl Config {
         dotenv().ok();
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
         let client_id = env::var("CLIENT_ID").expect("CLIENT_ID must be set");
-        let admin_hash_base64 = env::var("ADMIN_HASH").expect("ADMIN_HASH must be set");
         let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
         let port_str = env::var("PORT").expect("PORT must be set");
 
@@ -46,13 +41,6 @@ impl Config {
         if !valid_id(&client_id) {
             return Err("CLIENT_ID is not a valid id.".into());
         }
-        if admin_hash_base64.len() == 0 {
-            return Err("ADMIN_HASH is required.".into());
-        }
-        let Ok(admin_hash) = base64_decode(&admin_hash_base64) else {
-            return Err("ADMIN_HASH must be a valid base64 string.".into());
-        };
-
         if jwt_secret.len() == 0 {
             return Err("JWT_SECRET is required.".into());
         }
@@ -68,7 +56,6 @@ impl Config {
         Ok(Self {
             client_id,
             jwt_secret,
-            admin_hash,
             server: ServerConfig { port },
             db: DbConfig { url: database_url },
         })

@@ -1,10 +1,27 @@
+use std::env;
 use std::io::{self, Write};
 
+use crate::util::base64_decode;
 use crate::{
     auth::password::hash_password,
     util::{base64_encode, valid_username_format},
     Result,
 };
+
+pub fn extract_admin_hash() -> Result<String> {
+    let Ok(admin_hash_base64) = env::var("ADMIN_HASH") else {
+        return Err("ADMIN_HASH environment variable must be set.".into());
+    };
+
+    if admin_hash_base64.len() == 0 {
+        return Err("ADMIN_HASH environment variable must be set.".into());
+    }
+    let Ok(admin_hash) = base64_decode(&admin_hash_base64) else {
+        return Err("ADMIN_HASH must be a valid base64 string.".into());
+    };
+
+    Ok(admin_hash)
+}
 
 pub fn generate_admin_hash() -> Result<()> {
     let mut username = String::new();
