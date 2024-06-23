@@ -1,4 +1,5 @@
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use chrono::{Duration, Utc};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
 use super::models::Actor;
@@ -11,11 +12,16 @@ struct Claims {
     exp: usize,
 }
 
+// Duration in seconds
+const EXP_DURATION: i64 = 60 * 60 * 24 * 7; // 1 week
+
 pub fn create_auth_token(actor: &Actor, secret: &str) -> Result<String> {
+    let exp = Utc::now() + Duration::seconds(EXP_DURATION);
+
     let claims = Claims {
         sub: actor.id.clone(),
         scope: actor.scope.clone(),
-        exp: 1_619_007_000, // 2022-01-01
+        exp: exp.timestamp() as usize,
     };
 
     let Ok(token) = encode(
