@@ -28,14 +28,18 @@ pub async fn auth_middleware(
     let mut actor: Option<Actor> = None;
 
     if let Some(auth_header) = auth_header {
-        if auth_header.starts_with("Bearer ") {
-            let token = auth_header.replace("Bearer ", "");
-            if let Ok(data) = verify_auth_token(&token, &state.config.jwt_secret) {
-                if &data.id == &state.config.client_id {
-                    actor = Some(data);
-                }
-            };
+        // At this point, authentication must be verified
+        if !auth_header.starts_with("Bearer ") {
+            return to_error_response(Error::InvalidAuthToken);
         }
+        let token = auth_header.replace("Bearer ", "");
+        let Ok(data) = verify_auth_token(&token, &state.config.jwt_secret) else {
+            return to_error_response(Error::InvalidAuthToken);
+        };
+        if &data.id != &state.config.client_id {
+            return to_error_response(Error::InvalidClient);
+        }
+        actor = Some(data);
     }
 
     if let Some(actor) = actor {
