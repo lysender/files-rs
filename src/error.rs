@@ -19,6 +19,9 @@ pub enum Error {
     NoAuthToken,
     InvalidClient,
     RequiresAuth,
+    HashPasswordError(String),
+    VerifyPasswordHashError(String),
+    InvalidPassword,
 }
 
 // Allow string slices to be converted to Error
@@ -40,6 +43,9 @@ impl core::fmt::Display for Error {
             Self::NoAuthToken => write!(f, "No auth token"),
             Self::InvalidClient => write!(f, "Invalid client"),
             Self::RequiresAuth => write!(f, "Requires authentication"),
+            Self::HashPasswordError(val) => write!(f, "{}", val),
+            Self::VerifyPasswordHashError(val) => write!(f, "{}", val),
+            Self::InvalidPassword => write!(f, "Invalid password"),
         }
     }
 }

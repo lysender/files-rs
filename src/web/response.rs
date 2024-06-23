@@ -91,5 +91,20 @@ pub fn to_error_response(error: Error) -> Response<Body> {
             "Unauthorized".to_string(),
             "Unauthorized".to_string(),
         ),
+        Error::HashPasswordError(message) => create_error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            message,
+            "Internal Server Error".to_string(),
+        ),
+        Error::VerifyPasswordHashError(message) => create_error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            message,
+            "Internal Server Error".to_string(),
+        ),
+        Error::InvalidPassword => create_error_response(
+            StatusCode::UNAUTHORIZED,
+            "Invalid username or password".to_string(),
+            "Unauthorized".to_string(),
+        ),
     }
 }

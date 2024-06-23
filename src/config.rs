@@ -8,6 +8,7 @@ use crate::{util::valid_id, Result};
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub client_id: String,
+    pub admin_hash: String,
     pub jwt_secret: String,
     pub server: ServerConfig,
     pub db: DbConfig,
@@ -29,6 +30,7 @@ impl Config {
         dotenv().ok();
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
         let client_id = env::var("CLIENT_ID").expect("CLIENT_ID must be set");
+        let admin_hash = env::var("ADMIN_HASH").expect("ADMIN_HASH must be set");
         let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
         let port_str = env::var("PORT").expect("PORT must be set");
 
@@ -56,6 +58,7 @@ impl Config {
         Ok(Self {
             client_id,
             jwt_secret,
+            admin_hash,
             server: ServerConfig { port },
             db: DbConfig { url: database_url },
         })
@@ -74,4 +77,10 @@ pub struct Args {
 pub enum Commands {
     /// Runs the API server
     Server,
+
+    /// Checks health of the API server
+    CheckHealth,
+
+    /// Generates a login credential
+    GenerateLogin,
 }

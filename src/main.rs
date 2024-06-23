@@ -52,5 +52,13 @@ async fn run_command(args: Args, config: Config) -> Result<()> {
                 process::exit(1);
             }
         },
+        Commands::CheckHealth => {
+            println!("Checking health...");
+            Ok(())
+        }
+        Commands::GenerateLogin => {
+            println!("Generating login...");
+            Ok(())
+        }
     }
 }
