@@ -28,6 +28,12 @@ Simple file storage service written in Rust
 
 ## Authentication
 
+Acquire auth tokens:
+- Send login request to oauth endpoint
+- Return access token
+- Note: Just use a hardcoded username and password
+
+Verifying authenticated requests:
 - Send Authorization header with the following data:
   - Subject -> client_id
   - Scope -> auth files
@@ -67,6 +73,7 @@ To list directory files, simply fetch them from the cloud storage service.
 
 ## API Endpoints
 
+- GET /v1/auth/token
 - GET /v1/buckets
 - POST /v1/buckets?page=1&per_page=10
 - GET /v1/buckets/:bucket_id

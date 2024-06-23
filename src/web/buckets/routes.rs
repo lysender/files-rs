@@ -2,7 +2,7 @@ use axum::{middleware, routing::get, Router};
 
 use crate::web::{
     dirs::routes::dir_routes,
-    middlewares::{auth::auth_middleware, bucket::bucket_middleware},
+    middlewares::{auth::require_auth_middleware, bucket::bucket_middleware},
     server::AppState,
 };
 
@@ -17,7 +17,7 @@ pub fn buckets_routes(state: AppState) -> Router<AppState> {
         .nest("/:bucket_id", inner_bucket_routes(state.clone()))
         .layer(middleware::from_fn_with_state(
             state.clone(),
-            auth_middleware,
+            require_auth_middleware,
         ))
         .with_state(state)
 }

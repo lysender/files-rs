@@ -18,6 +18,7 @@ pub enum Error {
     InvalidAuthToken,
     NoAuthToken,
     InvalidClient,
+    RequiresAuth,
 }
 
 // Allow string slices to be converted to Error
@@ -38,6 +39,7 @@ impl core::fmt::Display for Error {
             Self::InvalidAuthToken => write!(f, "Invalid auth token"),
             Self::NoAuthToken => write!(f, "No auth token"),
             Self::InvalidClient => write!(f, "Invalid client"),
+            Self::RequiresAuth => write!(f, "Requires authentication"),
         }
     }
 }
