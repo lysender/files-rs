@@ -1,7 +1,7 @@
 use axum::{middleware, routing::get, Router};
 
 use crate::web::{
-    dirs::routes::dir_routes,
+    dirs::dir_routes,
     middlewares::{bucket_middleware, require_auth_middleware},
     server::AppState,
 };

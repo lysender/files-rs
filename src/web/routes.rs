@@ -8,7 +8,7 @@ use axum::{
 
 use super::{
     auth::authenticate_handler,
-    buckets::routes::buckets_routes,
+    buckets::buckets_routes,
     health::{health_live_handler, health_ready_handler},
     home::home_handler,
     middlewares::auth_middleware,
