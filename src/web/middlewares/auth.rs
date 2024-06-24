@@ -8,7 +8,7 @@ use axum::{
 };
 
 use crate::{
-    auth::{models::Actor, token::verify_auth_token},
+    auth::{verify_auth_token, Actor},
     web::{response::to_error_response, server::AppState},
     Error,
 };

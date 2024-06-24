@@ -1,12 +1,7 @@
 use axum::{extract::State, Json};
 
 use crate::{
-    auth::{
-        admin::extract_admin_hash,
-        models::{Actor, AuthToken, Credentials},
-        password::verify_password,
-        token::create_auth_token,
-    },
+    auth::{create_auth_token, extract_admin_hash, verify_password, Actor, AuthToken, Credentials},
     Error, Result,
 };
 

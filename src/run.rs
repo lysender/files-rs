@@ -3,7 +3,7 @@ use std::process;
 use crate::config::Args;
 use crate::config::{Commands, Config};
 use crate::web::server::run_web_server;
-use crate::{auth::admin::generate_admin_hash, Result};
+use crate::{auth::generate_admin_hash, Result};
 
 pub async fn run_command(args: Args) -> Result<()> {
     match args.command {
