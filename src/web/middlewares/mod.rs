@@ -1,3 +1,7 @@
-pub mod auth;
-pub mod bucket;
-pub mod dir;
+mod auth;
+mod bucket;
+mod dir;
+
+pub use auth::*;
+pub use bucket::*;
+pub use dir::*;

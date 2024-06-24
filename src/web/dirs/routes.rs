@@ -1,6 +1,6 @@
 use axum::{middleware, routing::get, Router};
 
-use crate::web::{middlewares::dir::dir_middleware, server::AppState};
+use crate::web::{middlewares::dir_middleware, server::AppState};
 
 use super::handlers::{
     create_dir_handler, delete_dir_handler, get_dir_handler, list_dirs_handler, update_dir_handler,

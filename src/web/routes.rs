@@ -11,7 +11,7 @@ use super::{
     buckets::routes::buckets_routes,
     health::{health_live_handler, health_ready_handler},
     home::home_handler,
-    middlewares::auth::auth_middleware,
+    middlewares::auth_middleware,
     not_found::not_found_handler,
 };
 
