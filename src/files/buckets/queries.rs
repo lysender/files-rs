@@ -36,10 +36,30 @@ pub async fn list_buckets(
     let mut per_page: i64 = MAX_PER_PAGE;
     let mut offset: i64 = 0;
 
+    if let Some(per_page_param) = params.per_page {
+        per_page = per_page_param as i64;
+    }
+    if let Some(page) = params.page {
+        if page > 0 {
+            offset = (page as i64 - 1) * per_page;
+        }
+    }
+
+    let params_copy = params.clone();
     let conn_result = db
         .interact(move |conn| {
-            dsl::buckets
-                .filter(dsl::client_id.eq(cid))
+            let mut query = dsl::buckets.into_boxed();
+            query = query.filter(dsl::client_id.eq(cid));
+
+            if let Some(keyword) = params_copy.keyword {
+                if keyword.len() > 0 {
+                    let pattern = format!("%{}%", keyword);
+                    query =
+                        query.filter(dsl::name.like(pattern.clone()).or(dsl::label.like(pattern)));
+                }
+            }
+
+            query
                 .limit(per_page)
                 .offset(offset)
                 .select(Bucket::as_select())
@@ -51,12 +71,54 @@ pub async fn list_buckets(
     match conn_result {
         Ok(select_res) => match select_res {
             Ok(items) => {
-                let total = items.len() as i32;
-                Ok(Paginated::new(items, 1, 10, total))
+                let total = list_buckets_count(db_pool, client_id, params).await?;
+                Ok(Paginated::new(items, 1, 10, total as i32))
             }
             Err(e) => {
                 error!("{}", e);
                 Err("Error reading buckets".into())
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            Err("Error using the db connection".into())
+        }
+    }
+}
+
+async fn list_buckets_count(
+    db_pool: &Pool,
+    client_id: &str,
+    params: &ListBucketsParams,
+) -> Result<i64> {
+    let Ok(db) = db_pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+
+    let cid = client_id.to_string();
+    let params_copy = params.clone();
+
+    let conn_result = db
+        .interact(move |conn| {
+            let mut query = dsl::buckets.into_boxed();
+            query = query.filter(dsl::client_id.eq(cid.as_str()));
+            if let Some(keyword) = params_copy.keyword {
+                if keyword.len() > 0 {
+                    let pattern = format!("%{}%", keyword);
+                    query =
+                        query.filter(dsl::name.like(pattern.clone()).or(dsl::label.like(pattern)));
+                }
+            }
+            query.select(count_star()).get_result::<i64>(conn)
+        })
+        .await;
+
+    match conn_result {
+        Ok(count_res) => match count_res {
+            Ok(count) => Ok(count),
+            Err(e) => {
+                error!("{}", e);
+                Err("Error counting buckets".into())
             }
         },
         Err(e) => {

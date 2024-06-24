@@ -37,7 +37,7 @@ pub struct ListBucketsParams {
     #[validate(range(min = 1, max = 50))]
     pub per_page: Option<u32>,
 
-    #[validate(length(min = 1, max = 50))]
+    #[validate(length(min = 0, max = 50))]
     pub keyword: Option<String>,
 }
 

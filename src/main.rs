@@ -21,7 +21,7 @@ pub use self::error::{Error, Result};
 #[tokio::main]
 async fn main() {
     // Set the RUST_LOG, if it hasn't been explicitly defined
-    if std::env::var_os("RUST_LOG").is_none() {
+    if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "files_rs=info")
     }
 
