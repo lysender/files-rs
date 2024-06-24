@@ -1,11 +1,14 @@
 use axum::{
-    extract::{Json, Path, State},
+    extract::{Json, Path, Query, State},
     http::StatusCode,
     Extension,
 };
 
 use crate::{
-    files::dirs::{create_dir, delete_dir, get_dir, list_dirs, update_dir, Dir, NewDir, UpdateDir},
+    files::dirs::{
+        create_dir, delete_dir, get_dir, list_dirs, update_dir, Dir, ListDirsParams, NewDir,
+        UpdateDir,
+    },
     web::{params::Params, response::JsonResponse, server::AppState},
     Error, Result,
 };
@@ -13,8 +16,12 @@ use crate::{
 pub async fn list_dirs_handler(
     State(state): State<AppState>,
     Path(bucket_id): Path<String>,
+    query: Option<Query<ListDirsParams>>,
 ) -> Result<JsonResponse> {
-    let dirs = list_dirs(&state.db_pool, &bucket_id).await?;
+    let Some(params) = query else {
+        return Err(Error::BadRequest("Invalid query parameters".to_string()));
+    };
+    let dirs = list_dirs(&state.db_pool, &bucket_id, &params).await?;
     Ok(JsonResponse::new(serde_json::to_string(&dirs).unwrap()))
 }
 

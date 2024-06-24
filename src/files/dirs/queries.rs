@@ -13,18 +13,37 @@ use crate::validators::flatten_errors;
 use crate::web::pagination::Paginated;
 use crate::{Error, Result};
 
+use super::ListDirsParams;
+
 const MAX_DIRS: i64 = 1000;
 
-pub async fn list_dirs(pool: &Pool, bucket_id: &str) -> Result<Paginated<Dir>> {
+pub async fn list_dirs(
+    pool: &Pool,
+    bucket_id: &str,
+    params: &ListDirsParams,
+) -> Result<Paginated<Dir>> {
+    if let Err(errors) = params.validate() {
+        return Err(Error::ValidationError(flatten_errors(&errors)));
+    }
     let Ok(db) = pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
     let bid = bucket_id.to_string();
+    let params_copy = params.clone();
     let conn_result = db
         .interact(move |conn| {
-            dsl::directories
-                .filter(dsl::bucket_id.eq(bid))
+            let mut query = dsl::directories.into_boxed();
+            query = query.filter(dsl::bucket_id.eq(bid.as_str()));
+
+            if let Some(keyword) = params_copy.keyword {
+                if keyword.len() > 0 {
+                    let pattern = format!("%{}%", keyword);
+                    query =
+                        query.filter(dsl::name.like(pattern.clone()).or(dsl::label.like(pattern)));
+                }
+            }
+            query
                 .select(Dir::as_select())
                 .order(dsl::label.asc())
                 .load::<Dir>(conn)
@@ -34,8 +53,8 @@ pub async fn list_dirs(pool: &Pool, bucket_id: &str) -> Result<Paginated<Dir>> {
     match conn_result {
         Ok(select_res) => match select_res {
             Ok(items) => {
-                let total = items.len() as i32;
-                Ok(Paginated::new(items, 1, 50, total))
+                let total = list_dirs_count(pool, bucket_id, params).await?;
+                Ok(Paginated::new(items, 1, 50, total as i32))
             }
             Err(e) => {
                 error!("{e}");
@@ -44,6 +63,44 @@ pub async fn list_dirs(pool: &Pool, bucket_id: &str) -> Result<Paginated<Dir>> {
         },
         Err(e) => {
             error!("{e}");
+            Err("Error using the db connection".into())
+        }
+    }
+}
+
+async fn list_dirs_count(db_pool: &Pool, bucket_id: &str, params: &ListDirsParams) -> Result<i64> {
+    let Ok(db) = db_pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+
+    let bid = bucket_id.to_string();
+    let params_copy = params.clone();
+
+    let conn_result = db
+        .interact(move |conn| {
+            let mut query = dsl::directories.into_boxed();
+            query = query.filter(dsl::bucket_id.eq(bid.as_str()));
+            if let Some(keyword) = params_copy.keyword {
+                if keyword.len() > 0 {
+                    let pattern = format!("%{}%", keyword);
+                    query =
+                        query.filter(dsl::name.like(pattern.clone()).or(dsl::label.like(pattern)));
+                }
+            }
+            query.select(count_star()).get_result::<i64>(conn)
+        })
+        .await;
+
+    match conn_result {
+        Ok(count_res) => match count_res {
+            Ok(count) => Ok(count),
+            Err(e) => {
+                error!("{}", e);
+                Err("Error counting directories".into())
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
             Err("Error using the db connection".into())
         }
     }
