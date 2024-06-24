@@ -1,7 +1,10 @@
+use std::time::Duration;
+
 use google_cloud_storage::client::{Client, ClientConfig};
 use google_cloud_storage::http::buckets::get::GetBucketRequest;
 use google_cloud_storage::http::objects::list::ListObjectsRequest;
 use google_cloud_storage::http::Error as CloudError;
+use google_cloud_storage::sign::SignedURLOptions;
 
 use crate::dirs::File;
 use crate::{Error, Result};
@@ -55,14 +58,16 @@ pub async fn list_objects(bucket_name: &str, prefix: &str, dir: &str) -> Result<
                 return Ok(vec![]);
             };
 
-            Ok(objects
+            let files = objects
                 .iter()
                 .map(|obj| {
                     let name = obj.name.clone();
                     let url = obj.media_link.clone();
                     File { name, url }
                 })
-                .collect())
+                .collect();
+
+            Ok(signed_urls(bucket_name, &files).await?)
         }
         Err(e) => match e {
             CloudError::Response(gerr) => {
@@ -74,5 +79,36 @@ pub async fn list_objects(bucket_name: &str, prefix: &str, dir: &str) -> Result<
             }
             _ => Err("Failed to list bucket objects from cloud storage.".into()),
         },
+    }
+}
+
+pub async fn signed_urls(bucket_name: &str, files: &Vec<File>) -> Result<Vec<File>> {
+    let Ok(config) = ClientConfig::default().with_auth().await else {
+        return Err("Failed to initialize storage client configuration.".into());
+    };
+    let client = Client::new(config);
+
+    let mut signed_files = Vec::with_capacity(files.len());
+    for file in files.iter() {
+        let mut updated_file = file.clone();
+        let url = signed_url(&client, bucket_name, &file.name).await?;
+        updated_file.url = url;
+        signed_files.push(updated_file);
+    }
+
+    Ok(signed_files)
+}
+
+async fn signed_url(client: &Client, bucket_name: &str, object_name: &str) -> Result<String> {
+    let mut options = SignedURLOptions::default();
+    options.expires = Duration::from_secs(3600 * 24);
+
+    let res = client
+        .signed_url(bucket_name, &object_name, None, None, options)
+        .await;
+
+    match res {
+        Ok(url) => Ok(url),
+        Err(_) => Err("Unable to sign object URL.".into()),
     }
 }

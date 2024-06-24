@@ -41,10 +41,6 @@ pub fn create_response(status: StatusCode, body: String) -> Response<Body> {
         .unwrap()
 }
 
-pub fn create_success_response(body: String) -> Response<Body> {
-    return create_response(StatusCode::OK, body);
-}
-
 pub fn create_error_response(status: StatusCode, message: String, error: String) -> Response<Body> {
     let body = ErrorResponse {
         status_code: status.as_u16(),
