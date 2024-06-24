@@ -5,10 +5,12 @@ use axum::{
 };
 
 use crate::{
+    buckets::Bucket,
     dirs::{
         create_dir, delete_dir, get_dir, list_dirs, update_dir, Dir, ListDirsParams, NewDir,
         UpdateDir,
     },
+    storage::list_objects,
     web::{params::Params, response::JsonResponse, server::AppState},
     Error, Result,
 };
@@ -88,4 +90,12 @@ pub async fn delete_dir_handler(
         StatusCode::NO_CONTENT,
         "".to_string(),
     ))
+}
+
+pub async fn list_files_handler(
+    Extension(bucket): Extension<Bucket>,
+    Extension(dir): Extension<Dir>,
+) -> Result<JsonResponse> {
+    let files = list_objects(&bucket.name, "o/", &dir.name).await?;
+    Ok(JsonResponse::new(serde_json::to_string(&files).unwrap()))
 }

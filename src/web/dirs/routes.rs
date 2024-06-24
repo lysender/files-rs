@@ -2,8 +2,12 @@ use axum::{middleware, routing::get, Router};
 
 use crate::web::{middlewares::dir_middleware, server::AppState};
 
-use super::handlers::{
-    create_dir_handler, delete_dir_handler, get_dir_handler, list_dirs_handler, update_dir_handler,
+use super::{
+    handlers::{
+        create_dir_handler, delete_dir_handler, get_dir_handler, list_dirs_handler,
+        update_dir_handler,
+    },
+    list_files_handler,
 };
 
 pub fn dir_routes(state: AppState) -> Router<AppState> {
@@ -21,6 +25,7 @@ fn inner_dir_routes(state: AppState) -> Router<AppState> {
                 .patch(update_dir_handler)
                 .delete(delete_dir_handler),
         )
+        .route("/files", get(list_files_handler))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             dir_middleware,
