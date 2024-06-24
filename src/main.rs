@@ -12,6 +12,7 @@ mod error;
 mod health;
 mod run;
 mod schema;
+mod storage;
 mod util;
 mod validators;
 mod web;

@@ -1,6 +1,5 @@
 use deadpool_diesel::sqlite::Pool;
 
-use cloud_storage::Client as CloudClient;
 use diesel::dsl::count_star;
 use diesel::prelude::*;
 use diesel::{QueryDsl, SelectableHelper};
@@ -10,6 +9,7 @@ use validator::Validate;
 use crate::buckets::{Bucket, NewBucket, UpdateBucket};
 use crate::dirs::count_bucket_dirs;
 use crate::schema::buckets::{self, dsl};
+use crate::storage::read_bucket;
 use crate::util::generate_id;
 use crate::validators::flatten_errors;
 use crate::web::pagination::Paginated;
@@ -150,11 +150,14 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) ->
     };
 
     // Bucket name must be unique for the client
-    if let Some(_) = find_client_bucket(db_pool, client_id, data.name.as_str()).await? {
+    if let Some(_) = find_client_bucket(db_pool, client_id, &data.name).await? {
         return Err(Error::ValidationError(
             "Bucket name already exists".to_string(),
         ));
     }
+
+    // Validate against the cloud storage
+    let _ = read_bucket(&data.name).await?;
 
     let data_copy = data.clone();
     let bucket = Bucket {
@@ -189,19 +192,6 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) ->
 }
 
 pub async fn get_bucket(db_pool: &Pool, id: &str) -> Result<Option<Bucket>> {
-    // Try to read the bucket from the cloud
-    let client = CloudClient::new();
-    let cloud_res = client.bucket().read(id).await;
-
-    match cloud_res {
-        Ok(bucket) => {
-            println!("{:?}", bucket);
-        }
-        Err(e) => {
-            error!("{}", e);
-        }
-    };
-
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
