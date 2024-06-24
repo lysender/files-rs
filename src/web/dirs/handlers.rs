@@ -5,10 +5,7 @@ use axum::{
 };
 
 use crate::{
-    files::{
-        models::{Dir, NewDir, UpdateDir},
-        queries::dirs::{create_dir, delete_dir, get_dir, list_dirs, update_dir},
-    },
+    files::dirs::{create_dir, delete_dir, get_dir, list_dirs, update_dir, Dir, NewDir, UpdateDir},
     web::{params::Params, response::JsonResponse, server::AppState},
     Error, Result,
 };

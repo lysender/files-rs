@@ -40,7 +40,6 @@ mod tests {
         let password = "password";
         let hash = hash_password(password).unwrap();
         assert!(hash.len() > 0);
-        println!("Hash: {}", hash);
     }
 
     #[test]

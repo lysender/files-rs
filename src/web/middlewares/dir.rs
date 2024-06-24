@@ -7,7 +7,7 @@ use axum::{
 };
 
 use crate::{
-    files::queries::dirs::get_dir,
+    files::dirs::get_dir,
     web::{params::Params, response::create_error_response, server::AppState},
 };
 

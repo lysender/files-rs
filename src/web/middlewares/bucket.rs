@@ -7,7 +7,7 @@ use axum::{
 };
 
 use crate::{
-    files::queries::buckets::get_bucket,
+    files::buckets::get_bucket,
     util::valid_id,
     web::{params::Params, response::create_error_response, server::AppState},
 };

@@ -33,6 +33,12 @@ pub struct UpdateDir {
     pub label: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct File {
+    pub name: String,
+    pub url: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

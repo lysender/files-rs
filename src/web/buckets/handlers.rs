@@ -5,9 +5,9 @@ use axum::{
 };
 
 use crate::{
-    files::{
-        models::{Bucket, NewBucket, UpdateBucket},
-        queries::buckets::{create_bucket, delete_bucket, get_bucket, list_buckets, update_bucket},
+    files::buckets::{
+        create_bucket, delete_bucket, get_bucket, list_buckets, update_bucket, Bucket, NewBucket,
+        UpdateBucket,
     },
     web::{response::JsonResponse, server::AppState},
     Error, Result,

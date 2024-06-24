@@ -6,7 +6,7 @@ use diesel::{QueryDsl, SelectableHelper};
 use tracing::error;
 use validator::Validate;
 
-use crate::files::models::{Dir, NewDir, UpdateDir};
+use crate::files::dirs::{Dir, NewDir, UpdateDir};
 use crate::schema::directories::{self, dsl};
 use crate::util::generate_id;
 use crate::validators::flatten_errors;

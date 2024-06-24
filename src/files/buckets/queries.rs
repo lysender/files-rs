@@ -6,14 +6,14 @@ use diesel::{QueryDsl, SelectableHelper};
 use tracing::error;
 use validator::Validate;
 
-use crate::files::models::{Bucket, NewBucket, UpdateBucket};
+use crate::files::buckets::{Bucket, NewBucket, UpdateBucket};
 use crate::schema::buckets::{self, dsl};
 use crate::util::generate_id;
 use crate::validators::flatten_errors;
 use crate::web::pagination::Paginated;
 use crate::{Error, Result};
 
-use super::dirs::count_bucket_dirs;
+use crate::files::dirs::count_bucket_dirs;
 
 const MAX_BUCKETS: i64 = 10;
 
