@@ -15,18 +15,33 @@ use crate::{Error, Result};
 
 use crate::files::dirs::count_bucket_dirs;
 
-const MAX_BUCKETS: i64 = 10;
+use super::ListBucketsParams;
 
-pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Paginated<Bucket>> {
+const MAX_BUCKETS: i64 = 10;
+const MAX_PER_PAGE: i64 = 50;
+
+pub async fn list_buckets(
+    db_pool: &Pool,
+    client_id: &str,
+    params: &ListBucketsParams,
+) -> Result<Paginated<Bucket>> {
+    if let Err(errors) = params.validate() {
+        return Err(Error::ValidationError(flatten_errors(&errors)));
+    }
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
     let cid = client_id.to_string();
+    let mut per_page: i64 = MAX_PER_PAGE;
+    let mut offset: i64 = 0;
+
     let conn_result = db
         .interact(move |conn| {
             dsl::buckets
                 .filter(dsl::client_id.eq(cid))
+                .limit(per_page)
+                .offset(offset)
                 .select(Bucket::as_select())
                 .order(dsl::label.asc())
                 .load::<Bucket>(conn)

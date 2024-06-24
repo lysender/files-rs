@@ -1,1 +1,3 @@
-pub mod conn;
+mod conn;
+
+pub use conn::*;

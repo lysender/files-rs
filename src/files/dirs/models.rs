@@ -33,6 +33,18 @@ pub struct UpdateDir {
     pub label: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, Validate)]
+pub struct ListDirsParams {
+    #[validate(range(min = 1, max = 1000))]
+    pub page: Option<u32>,
+
+    #[validate(range(min = 1, max = 50))]
+    pub per_page: Option<u32>,
+
+    #[validate(length(min = 1, max = 50))]
+    pub keyword: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct File {
     pub name: String,

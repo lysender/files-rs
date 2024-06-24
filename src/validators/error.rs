@@ -37,6 +37,12 @@ fn error_to_string(error: &ValidationError) -> String {
             (None, Some(max)) => format!("must be at most {} characters", max),
             _ => "invalid length".to_string(),
         },
+        "range" => match (error.params.get("min"), error.params.get("max")) {
+            (Some(min), Some(max)) => format!("must be between {} and {}", min, max),
+            (Some(min), None) => format!("must be at least {}", min),
+            (None, Some(max)) => format!("must be at most {}", max),
+            _ => "invalid".to_string(),
+        },
         "required" => "required".to_string(),
         "sluggable" => "must be composed of alpha-numeric characters or dashes".to_string(),
         _ => "invalid".to_string(),

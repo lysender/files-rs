@@ -8,7 +8,7 @@ use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{info, Level};
 
 use crate::config::Config;
-use crate::db::conn::create_pool;
+use crate::db::create_db_pool;
 use crate::web::routes::all_routes;
 use crate::Result;
 
@@ -21,7 +21,7 @@ pub struct AppState {
 pub async fn run_web_server(config: Config) -> Result<()> {
     let port = config.server.port;
 
-    let pool = create_pool();
+    let pool = create_db_pool();
     let state = AppState {
         config,
         db_pool: pool,
