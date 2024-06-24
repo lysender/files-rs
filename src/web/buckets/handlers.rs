@@ -5,7 +5,7 @@ use axum::{
 };
 
 use crate::{
-    files::buckets::{
+    buckets::{
         create_bucket, delete_bucket, get_bucket, list_buckets, update_bucket, Bucket,
         ListBucketsParams, NewBucket, UpdateBucket,
     },

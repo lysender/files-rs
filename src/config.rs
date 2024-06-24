@@ -9,6 +9,7 @@ use crate::{util::valid_id, Result};
 pub struct Config {
     pub client_id: String,
     pub jwt_secret: String,
+    pub cloud_credentials: String,
     pub server: ServerConfig,
     pub db: DbConfig,
 }
@@ -30,6 +31,8 @@ impl Config {
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
         let client_id = env::var("CLIENT_ID").expect("CLIENT_ID must be set");
         let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+        let cloud_credentials = env::var("GOOGLE_APPLICATION_CREDENTIALS")
+            .expect("GOOGLE_APPLICATION_CREDENTIALS must be set");
         let port_str = env::var("PORT").expect("PORT must be set");
 
         if database_url.len() == 0 {
@@ -56,6 +59,7 @@ impl Config {
         Ok(Self {
             client_id,
             jwt_secret,
+            cloud_credentials,
             server: ServerConfig { port },
             db: DbConfig { url: database_url },
         })

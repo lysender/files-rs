@@ -4,10 +4,11 @@ use run::run_command;
 use std::process;
 
 mod auth;
+mod buckets;
 mod config;
 mod db;
+mod dirs;
 mod error;
-mod files;
 mod health;
 mod run;
 mod schema;

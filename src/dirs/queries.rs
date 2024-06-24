@@ -6,50 +6,35 @@ use diesel::{QueryDsl, SelectableHelper};
 use tracing::error;
 use validator::Validate;
 
-use crate::files::buckets::{Bucket, NewBucket, UpdateBucket};
-use crate::schema::buckets::{self, dsl};
+use crate::dirs::{Dir, NewDir, UpdateDir};
+use crate::schema::directories::{self, dsl};
 use crate::util::generate_id;
 use crate::validators::flatten_errors;
 use crate::web::pagination::Paginated;
 use crate::{Error, Result};
 
-use crate::files::dirs::count_bucket_dirs;
+use super::ListDirsParams;
 
-use super::ListBucketsParams;
+const MAX_DIRS: i64 = 1000;
 
-const MAX_BUCKETS: i64 = 10;
-const MAX_PER_PAGE: i64 = 50;
-
-pub async fn list_buckets(
-    db_pool: &Pool,
-    client_id: &str,
-    params: &ListBucketsParams,
-) -> Result<Paginated<Bucket>> {
+pub async fn list_dirs(
+    pool: &Pool,
+    bucket_id: &str,
+    params: &ListDirsParams,
+) -> Result<Paginated<Dir>> {
     if let Err(errors) = params.validate() {
         return Err(Error::ValidationError(flatten_errors(&errors)));
     }
-    let Ok(db) = db_pool.get().await else {
+    let Ok(db) = pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
-    let cid = client_id.to_string();
-    let mut per_page: i64 = MAX_PER_PAGE;
-    let mut offset: i64 = 0;
-
-    if let Some(per_page_param) = params.per_page {
-        per_page = per_page_param as i64;
-    }
-    if let Some(page) = params.page {
-        if page > 0 {
-            offset = (page as i64 - 1) * per_page;
-        }
-    }
-
+    let bid = bucket_id.to_string();
     let params_copy = params.clone();
     let conn_result = db
         .interact(move |conn| {
-            let mut query = dsl::buckets.into_boxed();
-            query = query.filter(dsl::client_id.eq(cid));
+            let mut query = dsl::directories.into_boxed();
+            query = query.filter(dsl::bucket_id.eq(bid.as_str()));
 
             if let Some(keyword) = params_copy.keyword {
                 if keyword.len() > 0 {
@@ -58,50 +43,43 @@ pub async fn list_buckets(
                         query.filter(dsl::name.like(pattern.clone()).or(dsl::label.like(pattern)));
                 }
             }
-
             query
-                .limit(per_page)
-                .offset(offset)
-                .select(Bucket::as_select())
+                .select(Dir::as_select())
                 .order(dsl::label.asc())
-                .load::<Bucket>(conn)
+                .load::<Dir>(conn)
         })
         .await;
 
     match conn_result {
         Ok(select_res) => match select_res {
             Ok(items) => {
-                let total = list_buckets_count(db_pool, client_id, params).await?;
-                Ok(Paginated::new(items, 1, 10, total as i32))
+                let total = list_dirs_count(pool, bucket_id, params).await?;
+                Ok(Paginated::new(items, 1, 50, total as i32))
             }
             Err(e) => {
-                error!("{}", e);
-                Err("Error reading buckets".into())
+                error!("{e}");
+                Err("Error reading directories".into())
             }
         },
         Err(e) => {
-            error!("{}", e);
+            error!("{e}");
             Err("Error using the db connection".into())
         }
     }
 }
 
-async fn list_buckets_count(
-    db_pool: &Pool,
-    client_id: &str,
-    params: &ListBucketsParams,
-) -> Result<i64> {
+async fn list_dirs_count(db_pool: &Pool, bucket_id: &str, params: &ListDirsParams) -> Result<i64> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
-    let cid = client_id.to_string();
+    let bid = bucket_id.to_string();
     let params_copy = params.clone();
 
     let conn_result = db
         .interact(move |conn| {
-            let mut query = dsl::buckets.into_boxed();
-            query = query.filter(dsl::client_id.eq(cid.as_str()));
+            let mut query = dsl::directories.into_boxed();
+            query = query.filter(dsl::bucket_id.eq(bid.as_str()));
             if let Some(keyword) = params_copy.keyword {
                 if keyword.len() > 0 {
                     let pattern = format!("%{}%", keyword);
@@ -118,7 +96,7 @@ async fn list_buckets_count(
             Ok(count) => Ok(count),
             Err(e) => {
                 error!("{}", e);
-                Err("Error counting buckets".into())
+                Err("Error counting directories".into())
             }
         },
         Err(e) => {
@@ -128,7 +106,7 @@ async fn list_buckets_count(
     }
 }
 
-pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) -> Result<Bucket> {
+pub async fn create_dir(db_pool: &Pool, bucket_id: &str, data: &NewDir) -> Result<Dir> {
     if let Err(errors) = data.validate() {
         return Err(Error::ValidationError(flatten_errors(&errors)));
     }
@@ -137,48 +115,53 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) ->
         return Err("Error getting db connection".into());
     };
 
-    // Limit the number of buckets per client
-    let _ = match count_client_buckets(db_pool, client_id).await {
+    // Limit the number of directories per bucket
+    let _ = match count_bucket_dirs(db_pool, bucket_id).await {
         Ok(count) => {
-            if count >= MAX_BUCKETS {
+            if count >= MAX_DIRS {
                 return Err(Error::ValidationError(
-                    "Maximum number of buckets reached".to_string(),
+                    "Maximum number of dirs reached".to_string(),
                 ));
             }
         }
         Err(e) => return Err(e),
     };
 
-    // Bucket name must be unique for the client
-    if let Some(_) = find_client_bucket(db_pool, client_id, data.name.as_str()).await? {
+    // Directory name must be unique for the bucket
+    if let Some(_) = find_bucket_dir(db_pool, bucket_id, data.name.as_str()).await? {
         return Err(Error::ValidationError(
-            "Bucket name already exists".to_string(),
+            "Directory name already exists".to_string(),
         ));
     }
 
     let data_copy = data.clone();
-    let bucket = Bucket {
+    let today = chrono::Utc::now().timestamp();
+    let dir = Dir {
         id: generate_id(),
-        client_id: client_id.to_string(),
+        dir_type: "files".to_string(),
+        bucket_id: bucket_id.to_string(),
         name: data_copy.name,
         label: data_copy.label,
+        file_count: 0,
+        created_at: today,
+        updated_at: today,
     };
 
-    let bucket_copy = bucket.clone();
+    let dir_copy = dir.clone();
     let conn_result = db
         .interact(move |conn| {
-            diesel::insert_into(buckets::table)
-                .values(&bucket_copy)
+            diesel::insert_into(directories::table)
+                .values(&dir_copy)
                 .execute(conn)
         })
         .await;
 
     match conn_result {
         Ok(insert_res) => match insert_res {
-            Ok(_) => Ok(bucket),
+            Ok(_) => Ok(dir),
             Err(e) => {
                 error!("{}", e);
-                Err("Error creating a bucket".into())
+                Err("Error creating a directory".into())
             }
         },
         Err(e) => {
@@ -188,18 +171,18 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) ->
     }
 }
 
-pub async fn get_bucket(db_pool: &Pool, id: &str) -> Result<Option<Bucket>> {
-    let Ok(db) = db_pool.get().await else {
+pub async fn get_dir(pool: &Pool, id: &str) -> Result<Option<Dir>> {
+    let Ok(db) = pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
-    let bid = id.to_string();
+    let did = id.to_string();
     let conn_result = db
         .interact(move |conn| {
-            dsl::buckets
-                .find(bid)
-                .select(Bucket::as_select())
-                .first::<Bucket>(conn)
+            dsl::directories
+                .find(did)
+                .select(Dir::as_select())
+                .first::<Dir>(conn)
                 .optional()
         })
         .await;
@@ -208,35 +191,31 @@ pub async fn get_bucket(db_pool: &Pool, id: &str) -> Result<Option<Bucket>> {
         Ok(select_res) => match select_res {
             Ok(item) => Ok(item),
             Err(e) => {
-                error!("{}", e);
-                Err("Error finding bucket".into())
+                error!("{e}");
+                Err("Error reading directories".into())
             }
         },
         Err(e) => {
-            error!("{}", e);
+            error!("{e}");
             Err("Error using the db connection".into())
         }
     }
 }
 
-pub async fn find_client_bucket(
-    db_pool: &Pool,
-    client_id: &str,
-    name: &str,
-) -> Result<Option<Bucket>> {
-    let Ok(db) = db_pool.get().await else {
+pub async fn find_bucket_dir(pool: &Pool, bucket_id: &str, name: &str) -> Result<Option<Dir>> {
+    let Ok(db) = pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
-    let cid = client_id.to_string();
+    let bid = bucket_id.to_string();
     let name_copy = name.to_string();
     let conn_result = db
         .interact(move |conn| {
-            dsl::buckets
-                .filter(dsl::client_id.eq(cid.as_str()))
+            dsl::directories
+                .filter(dsl::bucket_id.eq(bid.as_str()))
                 .filter(dsl::name.eq(name_copy.as_str()))
-                .select(Bucket::as_select())
-                .first::<Bucket>(conn)
+                .select(Dir::as_select())
+                .first::<Dir>(conn)
                 .optional()
         })
         .await;
@@ -246,7 +225,7 @@ pub async fn find_client_bucket(
             Ok(item) => Ok(item),
             Err(e) => {
                 error!("{}", e);
-                Err("Error finding bucket".into())
+                Err("Error finding dir".into())
             }
         },
         Err(e) => {
@@ -256,16 +235,16 @@ pub async fn find_client_bucket(
     }
 }
 
-pub async fn count_client_buckets(db_pool: &Pool, client_id: &str) -> Result<i64> {
+pub async fn count_bucket_dirs(db_pool: &Pool, bucket_id: &str) -> Result<i64> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
-    let cid = client_id.to_string();
+    let bid = bucket_id.to_string();
     let conn_result = db
         .interact(move |conn| {
-            dsl::buckets
-                .filter(dsl::client_id.eq(cid.as_str()))
+            dsl::directories
+                .filter(dsl::bucket_id.eq(bid.as_str()))
                 .select(count_star())
                 .get_result::<i64>(conn)
         })
@@ -276,7 +255,7 @@ pub async fn count_client_buckets(db_pool: &Pool, client_id: &str) -> Result<i64
             Ok(count) => Ok(count),
             Err(e) => {
                 error!("{}", e);
-                Err("Error counting buckets".into())
+                Err("Error counting directories".into())
             }
         },
         Err(e) => {
@@ -286,7 +265,7 @@ pub async fn count_client_buckets(db_pool: &Pool, client_id: &str) -> Result<i64
     }
 }
 
-pub async fn update_bucket(db_pool: &Pool, id: &str, data: &UpdateBucket) -> Result<bool> {
+pub async fn update_dir(db_pool: &Pool, id: &str, data: &UpdateDir) -> Result<bool> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
@@ -301,11 +280,11 @@ pub async fn update_bucket(db_pool: &Pool, id: &str, data: &UpdateBucket) -> Res
     }
 
     let data_copy = data.clone();
-    let bucket_id = id.to_string();
+    let dir_id = id.to_string();
     let conn_result = db
         .interact(move |conn| {
-            diesel::update(dsl::buckets)
-                .filter(dsl::id.eq(bucket_id.as_str()))
+            diesel::update(dsl::directories)
+                .filter(dsl::id.eq(dir_id.as_str()))
                 .set(data_copy)
                 .execute(conn)
         })
@@ -316,7 +295,7 @@ pub async fn update_bucket(db_pool: &Pool, id: &str, data: &UpdateBucket) -> Res
             Ok(item) => Ok(item > 0),
             Err(e) => {
                 error!("{}", e);
-                Err("Error updating bucket".into())
+                Err("Error updating directory".into())
             }
         },
         Err(e) => {
@@ -326,23 +305,15 @@ pub async fn update_bucket(db_pool: &Pool, id: &str, data: &UpdateBucket) -> Res
     }
 }
 
-pub async fn delete_bucket(db_pool: &Pool, id: &str) -> Result<()> {
+pub async fn delete_dir(db_pool: &Pool, id: &str) -> Result<()> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
-    // Do not delete if there are still directories inside
-    let dir_count = count_bucket_dirs(db_pool, id).await?;
-    if dir_count > 0 {
-        return Err(Error::ValidationError(
-            "Cannot delete bucket with directories inside".to_string(),
-        ));
-    }
-
-    let bucket_id = id.to_string();
+    let dir_id = id.to_string();
     let conn_result = db
         .interact(move |conn| {
-            diesel::delete(dsl::buckets.filter(dsl::id.eq(bucket_id.as_str()))).execute(conn)
+            diesel::delete(dsl::directories.filter(dsl::id.eq(dir_id.as_str()))).execute(conn)
         })
         .await;
 
@@ -351,7 +322,7 @@ pub async fn delete_bucket(db_pool: &Pool, id: &str) -> Result<()> {
             Ok(_) => Ok(()),
             Err(e) => {
                 error!("{}", e);
-                Err("Error deleting bucket".into())
+                Err("Error deleting directory".into())
             }
         },
         Err(e) => {
