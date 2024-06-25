@@ -7,7 +7,7 @@ use google_cloud_storage::http::objects::list::ListObjectsRequest;
 use google_cloud_storage::http::Error as CloudError;
 use google_cloud_storage::sign::SignedURLOptions;
 
-use crate::files::File;
+use crate::files::{File, FileUrls};
 use crate::{Error, Result};
 
 pub async fn read_bucket(name: &str) -> Result<String> {
@@ -38,16 +38,18 @@ pub async fn read_bucket(name: &str) -> Result<String> {
     }
 }
 
-pub async fn list_objects(bucket_name: &str, prefix: &str, dir: &str) -> Result<Vec<File>> {
+pub async fn list_objects(bucket_name: &str, dir: &str) -> Result<Vec<File>> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
     };
     let client = Client::new(config);
 
+    // List objects from the original image sizes
+    let prefix = format!("o/{}", dir);
     let res = client
         .list_objects(&ListObjectsRequest {
             bucket: bucket_name.to_string(),
-            prefix: Some(format!("{}{}", prefix, dir)),
+            prefix: Some(prefix.clone()),
             max_results: Some(1000),
             ..Default::default()
         })
@@ -58,17 +60,21 @@ pub async fn list_objects(bucket_name: &str, prefix: &str, dir: &str) -> Result<
             let Some(objects) = items.items else {
                 return Ok(vec![]);
             };
+            let full_prefix = format!("{}/", prefix);
 
             let files = objects
                 .iter()
                 .map(|obj| {
-                    let name = obj.name.clone();
-                    let url = obj.media_link.clone();
-                    File { name, url }
+                    let mut name = obj.name.clone();
+                    name = name.replace(&full_prefix, "");
+                    File {
+                        name,
+                        urls: FileUrls::new(),
+                    }
                 })
                 .collect();
 
-            Ok(signed_urls(bucket_name, &files).await?)
+            format_files(bucket_name, dir, files).await
         }
         Err(e) => match e {
             CloudError::Response(gerr) => {
@@ -83,35 +89,73 @@ pub async fn list_objects(bucket_name: &str, prefix: &str, dir: &str) -> Result<
     }
 }
 
-pub async fn signed_urls(bucket_name: &str, files: &Vec<File>) -> Result<Vec<File>> {
+pub async fn format_files(bucket_name: &str, dir: &str, files: Vec<File>) -> Result<Vec<File>> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
     };
     let client = Client::new(config);
 
-    let mut signed_files = Vec::with_capacity(files.len());
+    let mut tasks = Vec::with_capacity(files.len());
     for file in files.iter() {
-        let mut updated_file = file.clone();
-        let url = signed_url(&client, bucket_name, &file.name).await?;
-        updated_file.url = url;
-        signed_files.push(updated_file);
+        let client_copy = client.clone();
+        let file_copy = file.clone();
+        let bname = bucket_name.to_string();
+        let dir_name = dir.to_string();
+
+        tasks.push(tokio::spawn(async move {
+            format_file(&client_copy, &bname, &dir_name, file_copy).await
+        }));
     }
 
-    Ok(signed_files)
+    let mut updated_files: Vec<File> = Vec::with_capacity(files.len());
+
+    for task in tasks {
+        let Ok(res) = task.await else {
+            return Err("Unable to extract data from spanwed task.".into());
+        };
+        let Ok(file) = res else {
+            return Err("Unable to format file.".into());
+        };
+
+        updated_files.push(file);
+    }
+
+    Ok(updated_files)
 }
 
-async fn signed_url(client: &Client, bucket_name: &str, object_name: &str) -> Result<String> {
+async fn format_file(client: &Client, bucket_name: &str, dir: &str, file: File) -> Result<File> {
+    let expires = Duration::from_secs(3600 * 24);
     let mut options = SignedURLOptions::default();
-    options.expires = Duration::from_secs(3600 * 24);
+    options.expires = expires.clone();
 
-    let res = client
-        .signed_url(bucket_name, &object_name, None, None, options)
-        .await;
+    let orig_path = format!("o/{}/{}", dir, file.name);
+    let thumb_path = format!("s/{}/{}", dir, file.name);
 
-    match res {
-        Ok(url) => Ok(url),
-        Err(_) => Err("Unable to sign object URL.".into()),
-    }
+    let Ok(orig_url) = client
+        .signed_url(bucket_name, &orig_path, None, None, options)
+        .await
+    else {
+        return Err("Unable to sign object URL.".into());
+    };
+
+    // For some reason, we cannot clone options
+    let mut options = SignedURLOptions::default();
+    options.expires = expires;
+
+    let Ok(thumb_url) = client
+        .signed_url(bucket_name, &thumb_path, None, None, options)
+        .await
+    else {
+        return Err("Unable to sign object URL.".into());
+    };
+
+    Ok(File {
+        name: file.name,
+        urls: FileUrls {
+            o: orig_url,
+            s: thumb_url,
+        },
+    })
 }
 
 pub async fn test_list_buckets(project_id: &str) -> Result<()> {

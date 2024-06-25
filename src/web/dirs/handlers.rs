@@ -96,6 +96,6 @@ pub async fn list_files_handler(
     Extension(bucket): Extension<Bucket>,
     Extension(dir): Extension<Dir>,
 ) -> Result<JsonResponse> {
-    let files = list_objects(&bucket.name, "o/", &dir.name).await?;
+    let files = list_objects(&bucket.name, &dir.name).await?;
     Ok(JsonResponse::new(serde_json::to_string(&files).unwrap()))
 }
