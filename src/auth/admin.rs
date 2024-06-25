@@ -1,6 +1,7 @@
 use std::env;
 use std::io::{self, Write};
 
+use crate::config::ADMIN_HASH;
 use crate::util::base64_decode;
 use crate::{
     auth::password::hash_password,
@@ -9,7 +10,7 @@ use crate::{
 };
 
 pub fn extract_admin_hash() -> Result<String> {
-    let Ok(admin_hash_base64) = env::var("ADMIN_HASH") else {
+    let Ok(admin_hash_base64) = env::var(ADMIN_HASH) else {
         return Err("ADMIN_HASH environment variable must be set.".into());
     };
 

@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use google_cloud_storage::client::{Client, ClientConfig};
 use google_cloud_storage::http::buckets::get::GetBucketRequest;
+use google_cloud_storage::http::buckets::list::ListBucketsRequest;
 use google_cloud_storage::http::objects::list::ListObjectsRequest;
 use google_cloud_storage::http::Error as CloudError;
 use google_cloud_storage::sign::SignedURLOptions;
@@ -110,5 +111,34 @@ async fn signed_url(client: &Client, bucket_name: &str, object_name: &str) -> Re
     match res {
         Ok(url) => Ok(url),
         Err(_) => Err("Unable to sign object URL.".into()),
+    }
+}
+
+pub async fn test_list_buckets(project_id: &str) -> Result<()> {
+    let Ok(config) = ClientConfig::default().with_auth().await else {
+        return Err("Failed to initialize storage client configuration.".into());
+    };
+    let client = Client::new(config);
+
+    let res = client
+        .list_buckets(&ListBucketsRequest {
+            project: project_id.to_string(),
+            max_results: Some(1),
+            ..Default::default()
+        })
+        .await;
+
+    match res {
+        Ok(_) => Ok(()),
+        Err(e) => match e {
+            CloudError::Response(gerr) => {
+                if gerr.code >= 400 && gerr.code < 500 {
+                    Err(Error::ValidationError(gerr.message))
+                } else {
+                    Err(format!("Google error: {}", gerr.message).as_str().into())
+                }
+            }
+            _ => Err("Failed to list buckets from cloud storage.".into()),
+        },
     }
 }

@@ -363,3 +363,32 @@ pub async fn delete_bucket(db_pool: &Pool, id: &str) -> Result<()> {
         }
     }
 }
+
+pub async fn test_read_bucket(db_pool: &Pool) -> Result<()> {
+    let Ok(db) = db_pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+
+    let conn_result = db
+        .interact(move |conn| {
+            dsl::buckets
+                .select(Bucket::as_select())
+                .first::<Bucket>(conn)
+                .optional()
+        })
+        .await;
+
+    match conn_result {
+        Ok(select_res) => match select_res {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                error!("{}", e);
+                Err("Error finding bucket".into())
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            Err("Error using the db connection".into())
+        }
+    }
+}

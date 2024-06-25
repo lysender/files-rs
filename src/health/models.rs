@@ -19,3 +19,27 @@ pub struct HealthChecks {
     pub database: String,
     pub secrets: String,
 }
+
+impl HealthStatus {
+    pub fn is_healthy(&self) -> bool {
+        self.checks.is_healthy()
+    }
+}
+
+impl HealthChecks {
+    pub fn new() -> Self {
+        Self {
+            auth: "DOWN".to_string(),
+            cloud_storage: "DOWN".to_string(),
+            database: "DOWN".to_string(),
+            secrets: "DOWN".to_string(),
+        }
+    }
+
+    pub fn is_healthy(&self) -> bool {
+        self.auth == "UP"
+            && self.cloud_storage == "UP"
+            && self.database == "UP"
+            && self.secrets == "UP"
+    }
+}

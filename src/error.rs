@@ -23,6 +23,7 @@ pub enum Error {
     VerifyPasswordHashError(String),
     InvalidPassword,
     Base64DecodeError(String),
+    ConfigError(String),
 }
 
 // Allow string slices to be converted to Error
@@ -48,6 +49,7 @@ impl core::fmt::Display for Error {
             Self::VerifyPasswordHashError(val) => write!(f, "{}", val),
             Self::InvalidPassword => write!(f, "Invalid password"),
             Self::Base64DecodeError(val) => write!(f, "{}", val),
+            Self::ConfigError(val) => write!(f, "{}", val),
         }
     }
 }
