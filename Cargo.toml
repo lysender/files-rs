@@ -7,7 +7,6 @@ edition = "2021"
 argon2 = "0.5.3"
 axum = { version = "0.7.5", features = ["macros"] }
 base64 = "0.22.1"
-bigdecimal = "0.4.4"
 chrono = "0.4.38"
 clap = { version = "4.5.7", features = ["derive"] }
 deadpool-diesel = { version = "0.6.1", features = ["sqlite"] }
@@ -21,7 +20,6 @@ rpassword = "7.3.1"
 serde = { version = "1.0.203", features = ["derive"] }
 serde_json = "1.0.117"
 tokio = { version = "1.38.0", features = ["full"] }
-toml = "0.8.14"
 tower = "0.4.13"
 tower-http = { version = "0.5.2", features = ["limit", "trace"] }
 tracing = "0.1.40"
