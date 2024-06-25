@@ -2,6 +2,8 @@ use std::process;
 
 use crate::config::Args;
 use crate::config::{Commands, Config};
+use crate::db::create_db_pool;
+use crate::health::check_readiness;
 use crate::web::server::run_web_server;
 use crate::{auth::generate_admin_hash, Result};
 
@@ -22,8 +24,18 @@ pub async fn run_server() -> Result<()> {
 }
 
 pub async fn check_health() -> Result<()> {
-    println!("Checking health...");
-    println!("Passed for now!");
+    let pool = create_db_pool();
+    let health = check_readiness(&pool).await?;
+
+    // Print the health status
+    println!("Status: {}", health.status);
+    println!("Message: {}", health.message);
+    println!("Checks:");
+    println!("  Auth: {}", health.checks.auth);
+    println!("  Cloud Storage: {}", health.checks.cloud_storage);
+    println!("  Database: {}", health.checks.database);
+    println!("  Secrets: {}", health.checks.secrets);
+
     Ok(())
 }
 

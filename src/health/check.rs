@@ -7,7 +7,6 @@ use crate::{
     buckets::test_read_bucket,
     config::{ADMIN_HASH, GOOGLE_PROJECT_ID, JWT_SECRET},
     storage::test_list_buckets,
-    web::server::AppState,
     Result,
 };
 
@@ -20,8 +19,8 @@ pub async fn check_liveness() -> Result<LiveStatus> {
     })
 }
 
-pub async fn check_readiness(state: AppState) -> Result<HealthStatus> {
-    let checks = perform_checks(state).await?;
+pub async fn check_readiness(db_pool: &Pool) -> Result<HealthStatus> {
+    let checks = perform_checks(db_pool).await?;
     let mut status = "DOWN".to_string();
     let mut message = "One or more health checks are failing".to_string();
 
@@ -37,14 +36,14 @@ pub async fn check_readiness(state: AppState) -> Result<HealthStatus> {
     })
 }
 
-async fn perform_checks(state: AppState) -> Result<HealthChecks> {
+async fn perform_checks(db_pool: &Pool) -> Result<HealthChecks> {
     dotenv().ok();
 
     let mut checks = HealthChecks::new();
 
     checks.auth = check_auth().await?;
     checks.cloud_storage = check_cloud_storage().await?;
-    checks.database = check_database(&state.db_pool).await?;
+    checks.database = check_database(db_pool).await?;
     checks.secrets = check_secrets().await?;
 
     Ok(checks)
