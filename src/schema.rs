@@ -24,4 +24,7 @@ diesel::table! {
 
 diesel::joinable!(directories -> buckets (bucket_id));
 
-diesel::allow_tables_to_appear_in_same_query!(buckets, directories,);
+diesel::allow_tables_to_appear_in_same_query!(
+    buckets,
+    directories,
+);
