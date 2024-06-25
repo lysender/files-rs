@@ -18,8 +18,8 @@ use super::{
 pub fn all_routes(state: AppState) -> Router {
     Router::new()
         .route("/", get(home_handler))
-        .route("/health/live", get(health_live_handler))
-        .route("/health/ready", get(health_ready_handler))
+        .route("/health/liveness", get(health_live_handler))
+        .route("/health/readiness", get(health_ready_handler))
         .route("/v1/auth/token", post(authenticate_handler))
         .nest("/v1/buckets", buckets_routes(state.clone()))
         .layer(middleware::from_fn_with_state(
