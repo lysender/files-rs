@@ -75,7 +75,7 @@ impl Config {
     }
 }
 
-/// CLI tool to create issues into a project
+/// File Management in the cloud
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
