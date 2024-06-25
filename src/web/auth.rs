@@ -23,7 +23,6 @@ pub async fn authenticate_handler(
     // Generate a token
     let actor = Actor {
         id: state.config.client_id.clone(),
-        name: "client".to_string(),
         scope: "auth files".to_string(),
     };
     let token = create_auth_token(&actor, &state.config.jwt_secret)?;

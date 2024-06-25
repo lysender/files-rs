@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone)]
 pub struct Actor {
     pub id: String,
-    pub name: String,
     pub scope: String,
 }
 

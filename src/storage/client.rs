@@ -6,7 +6,7 @@ use google_cloud_storage::http::objects::list::ListObjectsRequest;
 use google_cloud_storage::http::Error as CloudError;
 use google_cloud_storage::sign::SignedURLOptions;
 
-use crate::dirs::File;
+use crate::files::File;
 use crate::{Error, Result};
 
 pub async fn read_bucket(name: &str) -> Result<String> {

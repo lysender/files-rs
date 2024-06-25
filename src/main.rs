@@ -9,6 +9,7 @@ mod config;
 mod db;
 mod dirs;
 mod error;
+mod files;
 mod health;
 mod run;
 mod schema;

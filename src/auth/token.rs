@@ -53,7 +53,6 @@ pub fn verify_auth_token(token: &str, secret: &str) -> Result<Actor> {
 
     Ok(Actor {
         id: decoded.claims.sub,
-        name: "client".to_string(),
         scope: decoded.claims.scope,
     })
 }
@@ -67,7 +66,6 @@ mod tests {
         // Generate token
         let actor = Actor {
             id: "thor01".to_string(),
-            name: "client".to_string(),
             scope: "auth files".to_string(),
         };
         let token = create_auth_token(&actor, "secret").unwrap();
@@ -76,7 +74,6 @@ mod tests {
         // Validate it back
         let actor = verify_auth_token(&token, "secret").unwrap();
         assert_eq!(actor.id, "thor01".to_string());
-        assert_eq!(actor.name, "client".to_string());
         assert_eq!(actor.scope, "auth files".to_string());
     }
 
