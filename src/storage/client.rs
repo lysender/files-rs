@@ -74,7 +74,7 @@ pub async fn list_objects(bucket_name: &str, dir: &str) -> Result<Vec<File>> {
                 })
                 .collect();
 
-            format_files(bucket_name, dir, files).await
+            format_files(bucket_name, dir, &files).await
         }
         Err(e) => match e {
             CloudError::Response(gerr) => {
@@ -89,7 +89,7 @@ pub async fn list_objects(bucket_name: &str, dir: &str) -> Result<Vec<File>> {
     }
 }
 
-pub async fn format_files(bucket_name: &str, dir: &str, files: Vec<File>) -> Result<Vec<File>> {
+pub async fn format_files(bucket_name: &str, dir: &str, files: &Vec<File>) -> Result<Vec<File>> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
     };
@@ -103,30 +103,26 @@ pub async fn format_files(bucket_name: &str, dir: &str, files: Vec<File>) -> Res
         let dir_name = dir.to_string();
 
         tasks.push(tokio::spawn(async move {
-            format_file(&client_copy, &bname, &dir_name, file_copy).await
+            format_file(&client_copy, &bname, &dir_name, &file_copy).await
         }));
     }
 
     let mut updated_files: Vec<File> = Vec::with_capacity(files.len());
-
     for task in tasks {
         let Ok(res) = task.await else {
             return Err("Unable to extract data from spanwed task.".into());
         };
-        let Ok(file) = res else {
-            return Err("Unable to format file.".into());
-        };
-
+        let file = res?;
         updated_files.push(file);
     }
 
     Ok(updated_files)
 }
 
-async fn format_file(client: &Client, bucket_name: &str, dir: &str, file: File) -> Result<File> {
+async fn format_file(client: &Client, bucket_name: &str, dir: &str, file: &File) -> Result<File> {
     let expires = Duration::from_secs(3600 * 24);
     let mut options = SignedURLOptions::default();
-    options.expires = expires.clone();
+    options.expires = expires;
 
     let orig_path = format!("o/{}/{}", dir, file.name);
     let thumb_path = format!("s/{}/{}", dir, file.name);
@@ -150,7 +146,7 @@ async fn format_file(client: &Client, bucket_name: &str, dir: &str, file: File) 
     };
 
     Ok(File {
-        name: file.name,
+        name: file.name.clone(),
         urls: FileUrls {
             o: orig_url,
             s: thumb_url,
