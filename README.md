@@ -96,3 +96,75 @@ To list directory files, simply fetch them from the cloud storage service.
 - DELETE /v1/buckets/:bucket_id/dirs/:dir_id
 - GET /v1/buckets/:bucket_id/dirs/:dir_id/files
 
+## Configuration by ENV variables
+
+```
+DATABASE_URL=sqlite://db/db.sqlite3
+CLIENT_ID=value
+ADMIN_HASH=value
+JWT_SECRET=value
+PORT=11001
+
+GOOGLE_PROJECT_ID=value
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
+```
+
+## Build binary
+
+```
+cargo build --release
+```
+
+## Deployment
+
+You can deploy the application in many ways. In this example, we deploy
+it as a simple systemd service.
+
+### Setup systemd
+
+Edit systemd service file:
+
+```
+sudo systemctl edit --full files-rs.service
+```
+
+File: `/etc/systemd/system/files-rs.service`
+
+```
+[Unit]
+Description=files-rs File Management in the cloud
+
+[Service]
+User=www-data
+Group=www-data
+
+
+Environment="DATABASE_URL=sqlite:///path/to/db.sqlite3
+Environment="CLIENT_ID=value"
+Environment="ADMIN_HASH=value"
+Environment="JWT_SECRET=value"
+Environment="PORT=11001"
+Environment="GOOGLE_PROJECT_ID=value"
+Environment="GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json"
+
+WorkingDirectory=/data/www/html/sites/files-rs/
+ExecStart=/data/www/html/sites/files-rs/target/release/files-rs
+
+[Install]
+WantedBy=multi-user.target
+```
+
+To enable it for the first time:
+
+```
+sudo systemctl enable files-rs.service
+```
+
+Various commands:
+
+```
+sudo systemctl start files-rs.service
+sudo systemctl stop files-rs.service
+sudo systemctl restart files-rs.service
+sudo systemctl status files-rs.service
+```
