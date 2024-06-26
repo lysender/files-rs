@@ -32,10 +32,10 @@ pub struct UpdateBucket {
 #[derive(Debug, Clone, Deserialize, Validate)]
 pub struct ListBucketsParams {
     #[validate(range(min = 1, max = 1000))]
-    pub page: Option<u32>,
+    pub page: Option<i32>,
 
     #[validate(range(min = 1, max = 50))]
-    pub per_page: Option<u32>,
+    pub per_page: Option<i32>,
 
     #[validate(length(min = 0, max = 50))]
     pub keyword: Option<String>,

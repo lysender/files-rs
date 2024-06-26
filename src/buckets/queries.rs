@@ -17,8 +17,8 @@ use crate::{Error, Result};
 
 use super::ListBucketsParams;
 
-const MAX_BUCKETS: i64 = 10;
-const MAX_PER_PAGE: i64 = 50;
+const MAX_BUCKETS: i32 = 10;
+const MAX_PER_PAGE: i32 = 50;
 
 pub async fn list_buckets(
     db_pool: &Pool,
@@ -33,15 +33,25 @@ pub async fn list_buckets(
     };
 
     let cid = client_id.to_string();
-    let mut per_page: i64 = MAX_PER_PAGE;
+
+    let total_records = list_buckets_count(db_pool, client_id, params).await?;
+    let mut page: i32 = 1;
+    let mut per_page: i32 = MAX_PER_PAGE;
     let mut offset: i64 = 0;
 
     if let Some(per_page_param) = params.per_page {
-        per_page = per_page_param as i64;
+        if per_page_param > 0 && per_page_param <= MAX_PER_PAGE {
+            per_page = per_page_param;
+        }
     }
-    if let Some(page) = params.page {
-        if page > 0 {
-            offset = (page as i64 - 1) * per_page;
+
+    let total_pages: i64 = (total_records as f64 / per_page as f64).ceil() as i64;
+
+    if let Some(p) = params.page {
+        let p64 = p as i64;
+        if p64 > 0 && p64 <= total_pages {
+            page = p;
+            offset = (p64 - 1) * per_page as i64;
         }
     }
 
@@ -60,7 +70,7 @@ pub async fn list_buckets(
             }
 
             query
-                .limit(per_page)
+                .limit(per_page as i64)
                 .offset(offset)
                 .select(Bucket::as_select())
                 .order(dsl::label.asc())
@@ -70,10 +80,7 @@ pub async fn list_buckets(
 
     match conn_result {
         Ok(select_res) => match select_res {
-            Ok(items) => {
-                let total = list_buckets_count(db_pool, client_id, params).await?;
-                Ok(Paginated::new(items, 1, 10, total as i32))
-            }
+            Ok(items) => Ok(Paginated::new(items, page, per_page, total_records)),
             Err(e) => {
                 error!("{}", e);
                 Err("Error reading buckets".into())
@@ -140,7 +147,7 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) ->
     // Limit the number of buckets per client
     let _ = match count_client_buckets(db_pool, client_id).await {
         Ok(count) => {
-            if count >= MAX_BUCKETS {
+            if count >= MAX_BUCKETS as i64 {
                 return Err(Error::ValidationError(
                     "Maximum number of buckets reached".to_string(),
                 ));

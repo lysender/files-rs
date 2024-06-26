@@ -15,21 +15,44 @@ use crate::{Error, Result};
 
 use super::ListDirsParams;
 
-const MAX_DIRS: i64 = 1000;
+const MAX_DIRS: i32 = 1000;
+const MAX_PER_PAGE: i32 = 50;
 
 pub async fn list_dirs(
-    pool: &Pool,
+    db_pool: &Pool,
     bucket_id: &str,
     params: &ListDirsParams,
 ) -> Result<Paginated<Dir>> {
     if let Err(errors) = params.validate() {
         return Err(Error::ValidationError(flatten_errors(&errors)));
     }
-    let Ok(db) = pool.get().await else {
+    let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
     let bid = bucket_id.to_string();
+
+    let total_records = list_dirs_count(db_pool, bucket_id, params).await?;
+    let mut page: i32 = 1;
+    let mut per_page: i32 = MAX_PER_PAGE;
+    let mut offset: i64 = 0;
+
+    if let Some(per_page_param) = params.per_page {
+        if per_page_param > 0 && per_page_param <= MAX_PER_PAGE {
+            per_page = per_page_param;
+        }
+    }
+
+    let total_pages: i64 = (total_records as f64 / per_page as f64).ceil() as i64;
+
+    if let Some(p) = params.page {
+        let p64 = p as i64;
+        if p64 > 0 && p64 <= total_pages {
+            page = p;
+            offset = (p64 - 1) * per_page as i64;
+        }
+    }
+
     let params_copy = params.clone();
     let conn_result = db
         .interact(move |conn| {
@@ -44,6 +67,8 @@ pub async fn list_dirs(
                 }
             }
             query
+                .limit(per_page as i64)
+                .offset(offset)
                 .select(Dir::as_select())
                 .order(dsl::label.asc())
                 .load::<Dir>(conn)
@@ -52,10 +77,7 @@ pub async fn list_dirs(
 
     match conn_result {
         Ok(select_res) => match select_res {
-            Ok(items) => {
-                let total = list_dirs_count(pool, bucket_id, params).await?;
-                Ok(Paginated::new(items, 1, 50, total as i32))
-            }
+            Ok(items) => Ok(Paginated::new(items, page, per_page, total_records)),
             Err(e) => {
                 error!("{e}");
                 Err("Error reading directories".into())
@@ -118,7 +140,7 @@ pub async fn create_dir(db_pool: &Pool, bucket_id: &str, data: &NewDir) -> Resul
     // Limit the number of directories per bucket
     let _ = match count_bucket_dirs(db_pool, bucket_id).await {
         Ok(count) => {
-            if count >= MAX_DIRS {
+            if count >= MAX_DIRS as i64 {
                 return Err(Error::ValidationError(
                     "Maximum number of dirs reached".to_string(),
                 ));
