@@ -13,23 +13,37 @@ Simple file storage service written in Rust
 
 ## Workflow
 
-- Define tenants as configuration that includes the following:
-  - ID
-  - Name
-  - Storage Type (Google Cloud Storage, AWS S3, etc)
-  - Storage Bucket
-  - Oauth2 Client ID and Secret
-- Each API request are authenticated against a tenant
-- Files are structured as one level directory only:
-  - /bucket/contents/dir/files
-- Images can have sizes like orig, thumbnail and large
-  - /bucket/contents/dir/sizes/thumbnail/dir/files
-  - /bucket/contents/dir/sizes/large/dir/files
+- Tenants or clients are assigned with an ID
+- Each API request are authenticated against a client 
+- A client can have multiple buckets
+- Each bucket can have multiple container directories
+- Each directory can have the following directories:
+  - Contents - original contents
+  - Versions
+    - Thumbnails
+    - Large
+    - Etc
+- Contents can be any files supported
+- Clients may organize their files like a regular storage or an online photo album
+- All files must be uploaded through the application, either online or though cli
+- File properties like mime type, size and image dimentions are collected
+
+### Directory Structure
+
+```
+- Bucket
+  - Directory
+    - Contents
+    - Versions
+      - Thumbnails
+      - Large
+      - Etc
+```
 
 ## Authentication
 
 Acquire auth tokens:
-- Send login request to oauth endpoint
+- Send login request to auth endpoint
 - Return access token
 - Note: Just use a hardcoded username and password
 
@@ -74,12 +88,15 @@ Directory:
 - updated_at
 
 File:
+- id
+- content_type
 - name
-- url
-
-Files do not have a model represented in the database. They are stored in the storage service.
-
-To list directory files, simply fetch them from the cloud storage service.
+- size
+- is_image
+- versions
+- object_url
+- created_at
+- updated_at
 
 ## API Endpoints
 
