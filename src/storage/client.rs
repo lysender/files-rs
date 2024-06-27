@@ -45,7 +45,7 @@ pub async fn list_objects(bucket_name: &str, dir: &str) -> Result<Vec<File>> {
     let client = Client::new(config);
 
     // List objects from the original image sizes
-    let prefix = format!("o/{}", dir);
+    let prefix = format!("o/{}/", dir);
     let res = client
         .list_objects(&ListObjectsRequest {
             bucket: bucket_name.to_string(),
@@ -60,7 +60,7 @@ pub async fn list_objects(bucket_name: &str, dir: &str) -> Result<Vec<File>> {
             let Some(objects) = items.items else {
                 return Ok(vec![]);
             };
-            let full_prefix = format!("{}/", prefix);
+            let full_prefix = format!("{}", prefix);
 
             let files = objects
                 .iter()
