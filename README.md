@@ -96,6 +96,16 @@ To list directory files, simply fetch them from the cloud storage service.
 - DELETE /v1/buckets/:bucket_id/dirs/:dir_id
 - GET /v1/buckets/:bucket_id/dirs/:dir_id/files
 
+## Database client setup
+
+```
+# Only when not yet installed 
+sudo apt-get -y install libsqlite3-dev
+
+# Required by our ORM and migration tool
+cargo install diesel_cli --no-default-features --features sqlite
+```
+
 ## Configuration by ENV variables
 
 ```
@@ -125,7 +135,7 @@ it as a simple systemd service.
 Edit systemd service file:
 
 ```
-sudo systemctl edit --full files-rs.service
+sudo systemctl edit --force --full files-rs.service
 ```
 
 File: `/etc/systemd/system/files-rs.service`
