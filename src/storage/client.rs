@@ -120,7 +120,7 @@ pub async fn format_files(bucket_name: &str, dir: &str, files: &Vec<File>) -> Re
 }
 
 async fn format_file(client: &Client, bucket_name: &str, dir: &str, file: &File) -> Result<File> {
-    let expires = Duration::from_secs(3600 * 24);
+    let expires = Duration::from_secs(3600 * 12);
     let mut options = SignedURLOptions::default();
     options.expires = expires;
 
