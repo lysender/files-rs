@@ -1,4 +1,4 @@
-use crate::clients::{get_client, list_clients, update_client_status};
+use crate::clients::{delete_client, get_client, list_clients, update_client_status};
 use crate::config::ClientCommand;
 
 use crate::db::create_db_pool;
@@ -72,6 +72,13 @@ async fn run_disable_client(id: String) -> Result<()> {
 }
 
 async fn run_delete_client(id: String) -> Result<()> {
-    println!("Delete client: {id}");
+    let db_pool = create_db_pool();
+    let client = get_client(&db_pool, &id).await?;
+    if let Some(_) = client {
+        let _ = delete_client(&db_pool, &id).await?;
+        println!("Client deleted.");
+    } else {
+        println!("Client not found.");
+    }
     Ok(())
 }
