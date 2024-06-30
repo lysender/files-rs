@@ -1,5 +1,6 @@
 use std::process;
 
+use crate::clients::run_client_command;
 use crate::config::{BucketCommand, CliArgs, ClientCommand, UserCommand};
 use crate::config::{Commands, Config};
 use crate::db::create_db_pool;
@@ -10,7 +11,7 @@ use crate::{auth::generate_admin_hash, Result};
 pub async fn run_command(args: CliArgs) -> Result<()> {
     match args.command {
         Commands::Server => run_server().await,
-        Commands::Clients(cmd) => manage_clients(cmd).await,
+        Commands::Clients(cmd) => run_client_command(cmd).await,
         Commands::Buckets(cmd) => manage_buckets(cmd).await,
         Commands::Users(cmd) => manage_users(cmd).await,
         Commands::CheckHealth => check_health().await,
@@ -24,12 +25,6 @@ pub async fn run_server() -> Result<()> {
         process::exit(1);
     });
     run_web_server(config).await
-}
-
-pub async fn manage_clients(cmd: ClientCommand) -> Result<()> {
-    println!("Manage clients");
-    println!("{:?}", cmd);
-    Ok(())
 }
 
 pub async fn manage_buckets(cmd: BucketCommand) -> Result<()> {

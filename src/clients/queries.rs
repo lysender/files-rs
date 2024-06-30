@@ -67,7 +67,7 @@ pub async fn create_client(db_pool: &Pool, data: &NewClient) -> Result<Client> {
         Err(e) => return Err(e),
     };
 
-    // Directory name must be unique for the bucket
+    // Client name must be unique
     if let Some(_) = find_client_by_name(db_pool, &data.name).await? {
         return Err(Error::ValidationError("Client already exists".to_string()));
     }
@@ -105,8 +105,8 @@ pub async fn create_client(db_pool: &Pool, data: &NewClient) -> Result<Client> {
     }
 }
 
-pub async fn get_client(pool: &Pool, id: &str) -> Result<Option<Client>> {
-    let Ok(db) = pool.get().await else {
+pub async fn get_client(db_pool: &Pool, id: &str) -> Result<Option<Client>> {
+    let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
