@@ -60,6 +60,13 @@ Each client has access to the following resources:
 
 All clients are managed via the CLI only.
 
+```bash
+./files-rs clients list
+./files-rs clients create
+./files-rs clients disable client_id
+./files-rs clients delete client_id
+```
+
 Client:
 - id
 - name
@@ -72,9 +79,10 @@ Each clients are provided with a team, which are users able to access the client
 Teams are managed via CLI only as well.
 
 ```bash
-./files-rs list-users client_id
-./files-rs add-user client_id
-./files-rs remove-user client_id username
+./files-rs users list client_id
+./files-rs users create client_id
+./files-rs users disable client_id
+./files-rs users delete client_id username
 ```
 
 User:
@@ -152,9 +160,9 @@ Buckets are created outside of the application, like in Google Console or using 
 They are added into the client resources via the CLI.
 
 ```bash
-./files-rs list-buckets client_id
-./files-rs add-bucket client_id bucket_name
-./files-rs remove-bucket client_id bucket_id
+./files-rs buckets list client_id
+./files-rs buckets create client_id bucket_name
+./files-rs buckets delete client_id bucket_id
 ```
 
 ### Setup Admin User
@@ -186,7 +194,6 @@ Bucket:
 
 Directory:
 - id
-- dir_type
 - bucket_id
 - name
 - label
