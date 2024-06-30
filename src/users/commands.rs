@@ -1,12 +1,12 @@
 use crate::config::{Config, UserCommand};
 use crate::db::create_db_pool;
-use crate::users::queries::{list_users, update_user_password};
+use crate::users::queries::{delete_user, list_users, update_user_password, update_user_status};
 use crate::Result;
 
 use super::queries::{create_user, get_user};
 use super::NewUser;
 
-pub async fn run_user_command(config: Config, cmd: UserCommand) -> Result<()> {
+pub async fn run_user_command(cmd: UserCommand) -> Result<()> {
     match cmd {
         UserCommand::List { client_id } => run_list_users(client_id).await,
         UserCommand::Create {
@@ -15,9 +15,9 @@ pub async fn run_user_command(config: Config, cmd: UserCommand) -> Result<()> {
             roles,
         } => run_create_user(client_id, username, roles).await,
         UserCommand::Password { id } => run_set_user_password(id).await,
-        UserCommand::Disable { id } => run_disable_user(config, id).await,
-        UserCommand::Enable { id } => run_enable_user(config, id).await,
-        UserCommand::Delete { id } => run_delete_user(config, id).await,
+        UserCommand::Disable { id } => run_disable_user(id).await,
+        UserCommand::Enable { id } => run_enable_user(id).await,
+        UserCommand::Delete { id } => run_delete_user(id).await,
     }
 }
 
@@ -75,14 +75,46 @@ async fn run_set_user_password(id: String) -> Result<()> {
     Ok(())
 }
 
-async fn run_disable_user(config: Config, id: String) -> Result<()> {
+async fn run_disable_user(id: String) -> Result<()> {
+    let db_pool = create_db_pool();
+    let user = get_user(&db_pool, &id).await?;
+    if let Some(node) = user {
+        if &node.status == "inactive" {
+            println!("User already disabled.");
+            return Ok(());
+        }
+        let _ = update_user_status(&db_pool, &id, "inactive").await?;
+        println!("User disabled.");
+    } else {
+        println!("User not found.");
+    }
     Ok(())
 }
 
-async fn run_enable_user(config: Config, id: String) -> Result<()> {
+async fn run_enable_user(id: String) -> Result<()> {
+    let db_pool = create_db_pool();
+    let user = get_user(&db_pool, &id).await?;
+    if let Some(node) = user {
+        if &node.status == "inactive" {
+            println!("User already disabled.");
+            return Ok(());
+        }
+        let _ = update_user_status(&db_pool, &id, "inactive").await?;
+        println!("User disabled.");
+    } else {
+        println!("User not found.");
+    }
     Ok(())
 }
 
-async fn run_delete_user(config: Config, id: String) -> Result<()> {
+async fn run_delete_user(id: String) -> Result<()> {
+    let db_pool = create_db_pool();
+    let user = get_user(&db_pool, &id).await?;
+    if let Some(_) = user {
+        let _ = delete_user(&db_pool, &id).await?;
+        println!("User deleted.");
+    } else {
+        println!("User not found.");
+    }
     Ok(())
 }

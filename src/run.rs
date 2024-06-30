@@ -18,7 +18,7 @@ pub async fn run_command(args: CliArgs) -> Result<()> {
         Commands::Server => run_server(config).await,
         Commands::Clients(cmd) => run_client_command(cmd).await,
         Commands::Buckets(cmd) => manage_buckets(config, cmd).await,
-        Commands::Users(cmd) => run_user_command(config, cmd).await,
+        Commands::Users(cmd) => run_user_command(cmd).await,
         Commands::CheckHealth => check_health().await,
         Commands::GenerateLogin => generate_login(),
     }
