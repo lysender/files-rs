@@ -81,10 +81,10 @@ Teams are managed via CLI only as well.
 
 ```bash
 ./files-rs users list client_id
-./files-rs users create client_id
-./files-rs users enable client_id
-./files-rs users disable client_id
-./files-rs users delete client_id username
+./files-rs users create client_id username
+./files-rs users enable id 
+./files-rs users disable id 
+./files-rs users delete id 
 ```
 
 User:
@@ -164,7 +164,7 @@ They are added into the client resources via the CLI.
 ```bash
 ./files-rs buckets list client_id
 ./files-rs buckets create client_id bucket_name
-./files-rs buckets delete client_id bucket_id
+./files-rs buckets delete bucket_id
 ```
 
 ### Setup Admin User
