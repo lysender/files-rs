@@ -6,10 +6,10 @@ Simple file storage service written in Rust
 
 - [ ] Serves JSON API endpoints to manage files
 - [ ] Multi-tenant support
-- [ ] Multi-bucket support - mapped to a tenant
+- [ ] Multi-bucket support
 - [ ] Supports Google Cloud Storage for now
 - [ ] SQLite for database
-- [ ] Oauth2 and JWT for client authentication
+- [ ] Simple JWT authentication
 
 ## Workflow
 
@@ -26,7 +26,7 @@ Simple file storage service written in Rust
 - Contents can be any files supported
 - Clients may organize their files like a regular storage or an online photo album
 - All files must be uploaded through the application, either online or though cli
-- File properties like mime type, size and image dimentions are collected
+- Collects mime type, size and image dimentions
 
 ### Directory Structure
 
@@ -47,21 +47,129 @@ Acquire auth tokens:
 - Return access token
 - Note: Just use a hardcoded username and password
 
+### Clients
+
+Clients are the tenants or customers of the service. They are assigned with an ID.
+
+Each client has access to the following resources:
+- teams
+- users
+- buckets
+- directories
+- files
+
+All clients are managed via the CLI only.
+
+Client:
+- id
+- name
+- status: active, inactive
+- created_at
+
+### Teams/Users
+
+Each clients are provided with a team, which are users able to access the client resources.
+Teams are managed via CLI only as well.
+
+```bash
+./files-rs list-users client_id
+./files-rs add-user client_id
+./files-rs remove-user client_id username
+```
+
+User:
+- id
+- client_id
+- username
+- password
+- status: active, inactive
+- roles: csv of roles
+- created_at
+- updated_at
+
+Usename is unique globally although it is namespaced by client_id.
+
+### Roles
+
+- FilesAdmin
+- FilesEditor
+- FilesViewer
+
+### Permissions
+
+- dirs.create
+- dirs.edit
+- dirs.delete
+- dirs.list
+- dirs.view
+- dirs.manage
+- files.create
+- files.edit
+- files.delete
+- files.list
+- files.view
+- files.manage
+
+### Roles to Permissions Mapping
+
+FilesAdmin:
+- dirs.create
+- dirs.edit
+- dirs.delete
+- dirs.list
+- dirs.view
+- dirs.manage
+- files.create
+- files.edit
+- files.delete
+- files.list
+- files.view
+- files.manage
+
+Summary: Admins have full access to directories and files
+
+FilesEditor:
+- dirs.list
+- dirs.view
+- files.create
+- files.list
+- files.view
+
+Summary: Editors can view and upload new files
+
+FilesViewer:
+- dirs.list
+- dirs.view
+- files.list
+- files.view
+
+Summary: Viewers can only view directories and files
+
+## Buckets
+
+Buckets are created outside of the application, like in Google Console or using gsutil.
+
+They are added into the client resources via the CLI.
+
+```bash
+./files-rs list-buckets client_id
+./files-rs add-bucket client_id bucket_name
+./files-rs remove-bucket client_id bucket_id
+```
+
 ### Setup Admin User
 
 Run the following:
+
 ```bash
-# Dev mode
-cargo run -- generate-login
-# Prod mode
-files-rs generate-login
+./files-rs generate-login
 ```
 
 Verifying authenticated requests:
 - Send Authorization header with the following data:
   - Subject -> client_id
   - Scope -> auth files
-  - Expires -> should not exceed 1 week
+  - Expires
 - Validate authorization header using a middleware
 - Attach client info as request extension
 
@@ -75,7 +183,6 @@ Bucket:
 - id
 - client_id
 - name
-- label
 
 Directory:
 - id
