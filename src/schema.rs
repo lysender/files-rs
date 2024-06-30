@@ -30,11 +30,26 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    users (id) {
+        id -> Text,
+        client_id -> Text,
+        username -> Text,
+        password -> Text,
+        status -> Text,
+        roles -> Text,
+        created_at -> BigInt,
+        updated_at -> BigInt,
+    }
+}
+
 diesel::joinable!(buckets -> clients (client_id));
 diesel::joinable!(dirs -> buckets (bucket_id));
+diesel::joinable!(users -> clients (client_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     buckets,
     clients,
     dirs,
+    users,
 );
