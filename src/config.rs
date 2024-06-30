@@ -110,24 +110,24 @@ pub enum Commands {
 #[derive(Subcommand, Debug)]
 pub enum ClientCommand {
     List,
-    Create,
-    Enable,
-    Disable,
-    Delete,
+    Create { name: String },
+    Enable { client_id: String },
+    Disable { client_id: String },
+    Delete { client_id: String },
 }
 
 #[derive(Subcommand, Debug)]
 pub enum UserCommand {
     List,
-    Create,
-    Enable,
-    Disable,
-    Delete,
+    Create { client_id: String, username: String },
+    Enable { client_id: String, id: String },
+    Disable { client_id: String, id: String },
+    Delete { client_id: String, id: String },
 }
 
 #[derive(Subcommand, Debug)]
 pub enum BucketCommand {
-    List,
-    Create,
-    Delete,
+    List { client_id: String },
+    Create { client_id: String, name: String },
+    Delete { client_id: String, id: String },
 }
