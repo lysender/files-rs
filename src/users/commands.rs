@@ -1,9 +1,9 @@
 use crate::config::{Config, UserCommand};
 use crate::db::create_db_pool;
-use crate::users::queries::list_users;
+use crate::users::queries::{list_users, update_user_password};
 use crate::Result;
 
-use super::queries::create_user;
+use super::queries::{create_user, get_user};
 use super::NewUser;
 
 pub async fn run_user_command(config: Config, cmd: UserCommand) -> Result<()> {
@@ -14,7 +14,7 @@ pub async fn run_user_command(config: Config, cmd: UserCommand) -> Result<()> {
             username,
             roles,
         } => run_create_user(client_id, username, roles).await,
-        UserCommand::Password { id } => run_set_user_password(config, id).await,
+        UserCommand::Password { id } => run_set_user_password(id).await,
         UserCommand::Disable { id } => run_disable_user(config, id).await,
         UserCommand::Enable { id } => run_enable_user(config, id).await,
         UserCommand::Delete { id } => run_delete_user(config, id).await,
@@ -52,7 +52,26 @@ async fn run_create_user(client_id: String, username: String, roles: String) -> 
     Ok(())
 }
 
-async fn run_set_user_password(config: Config, id: String) -> Result<()> {
+async fn run_set_user_password(id: String) -> Result<()> {
+    let db_pool = create_db_pool();
+    let user = get_user(&db_pool, &id).await?;
+    if let Some(node) = user {
+        let prompt = format!("Enter new password for {}: ", node.username);
+        let Ok(password) = rpassword::prompt_password(prompt) else {
+            return Err("Failed to read password".into());
+        };
+        let password = password.trim().to_string();
+        if password.len() < 8 {
+            return Err("Password must be at least 8 characters".into());
+        }
+        if password.len() > 100 {
+            return Err("Password must be at most 100 characters".into());
+        }
+        let _ = update_user_password(&db_pool, &id, &password).await?;
+        println!("Password updated.");
+    } else {
+        println!("User not found.");
+    }
     Ok(())
 }
 
