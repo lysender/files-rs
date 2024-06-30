@@ -22,10 +22,10 @@ pub struct NewUser {
     #[validate(custom(function = "crate::validators::alphanumeric"))]
     pub username: String,
 
-    #[validate(length(min = 7, max = 100))]
+    #[validate(length(min = 8, max = 100))]
     pub password: String,
 
-    #[validate(length(min = 7, max = 100))]
+    #[validate(length(min = 1, max = 100))]
     #[validate(custom(function = "crate::validators::csvname"))]
     pub roles: String,
 }

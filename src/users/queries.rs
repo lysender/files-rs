@@ -6,6 +6,7 @@ use diesel::{QueryDsl, SelectableHelper};
 use tracing::error;
 use validator::Validate;
 
+use crate::auth::hash_password;
 use crate::schema::users::{self, dsl};
 use crate::util::generate_id;
 use crate::validators::flatten_errors;
@@ -67,22 +68,24 @@ pub async fn create_user(db_pool: &Pool, client_id: &str, data: &NewUser) -> Res
         Err(e) => return Err(e),
     };
 
-    // Userectory name must be unique
+    // Username must be unique
     if let Some(_) = find_user_by_username(db_pool, client_id, &data.username).await? {
         return Err(Error::ValidationError(
-            "Userectory name already exists".to_string(),
+            "Username already exists".to_string(),
         ));
     }
 
     let data_copy = data.clone();
     let today = chrono::Utc::now().timestamp();
+    let hashed = hash_password(&data.password)?;
+
     let dir = User {
         id: generate_id(),
         client_id: client_id.to_string(),
         username: data_copy.username,
-        password: data_copy.password,
+        password: hashed,
         status: "active".to_string(),
-        roles: "".to_string(),
+        roles: data_copy.roles,
         created_at: today,
         updated_at: today,
     };
@@ -216,11 +219,12 @@ pub async fn update_user_status(db_pool: &Pool, id: &str, status: &str) -> Resul
 
     let id = id.to_string();
     let status = status.to_string();
+    let today = chrono::Utc::now().timestamp();
     let conn_result = db
         .interact(move |conn| {
             diesel::update(dsl::users)
                 .filter(dsl::id.eq(&id))
-                .set(dsl::status.eq(&status))
+                .set((dsl::status.eq(&status), dsl::updated_at.eq(today)))
                 .execute(conn)
         })
         .await;
@@ -231,6 +235,38 @@ pub async fn update_user_status(db_pool: &Pool, id: &str, status: &str) -> Resul
             Err(e) => {
                 error!("{}", e);
                 Err("Error updating user".into())
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            Err("Error using the db connection".into())
+        }
+    }
+}
+
+pub async fn update_user_password(db_pool: &Pool, id: &str, password: &str) -> Result<bool> {
+    let Ok(db) = db_pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+
+    let id = id.to_string();
+    let today = chrono::Utc::now().timestamp();
+    let hashed = hash_password(&password)?;
+    let conn_result = db
+        .interact(move |conn| {
+            diesel::update(dsl::users)
+                .filter(dsl::id.eq(&id))
+                .set((dsl::password.eq(&hashed), dsl::updated_at.eq(today)))
+                .execute(conn)
+        })
+        .await;
+
+    match conn_result {
+        Ok(update_res) => match update_res {
+            Ok(affected) => Ok(affected > 0),
+            Err(e) => {
+                error!("{}", e);
+                Err("Error updating user password".into())
             }
         },
         Err(e) => {

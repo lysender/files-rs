@@ -118,11 +118,26 @@ pub enum ClientCommand {
 
 #[derive(Subcommand, Debug)]
 pub enum UserCommand {
-    List,
-    Create { client_id: String, username: String },
-    Enable { id: String },
-    Disable { id: String },
-    Delete { id: String },
+    List {
+        client_id: String,
+    },
+    Create {
+        client_id: String,
+        username: String,
+        roles: String,
+    },
+    Password {
+        id: String,
+    },
+    Enable {
+        id: String,
+    },
+    Disable {
+        id: String,
+    },
+    Delete {
+        id: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
