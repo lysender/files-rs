@@ -183,16 +183,13 @@ Verifying authenticated requests:
 
 ## Models
 
-Client (don't need persistence for now):
-- id
-- name
-
 Bucket:
 - id
 - client_id
 - name
+- created_at
 
-Directory:
+Dir:
 - id
 - bucket_id
 - name

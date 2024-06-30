@@ -5,14 +5,22 @@ diesel::table! {
         id -> Text,
         client_id -> Text,
         name -> Text,
-        label -> Text,
+        created_at -> BigInt,
     }
 }
 
 diesel::table! {
-    directories (id) {
+    clients (id) {
         id -> Text,
-        dir_type -> Text,
+        name -> Text,
+        status -> Text,
+        created_at -> BigInt,
+    }
+}
+
+diesel::table! {
+    dirs (id) {
+        id -> Text,
         bucket_id -> Text,
         name -> Text,
         label -> Text,
@@ -22,9 +30,11 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(directories -> buckets (bucket_id));
+diesel::joinable!(buckets -> clients (client_id));
+diesel::joinable!(dirs -> buckets (bucket_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     buckets,
-    directories,
+    clients,
+    dirs,
 );
