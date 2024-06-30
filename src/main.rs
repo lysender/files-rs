@@ -1,5 +1,5 @@
 use clap::Parser;
-use config::{Args, RUST_LOG};
+use config::{CliArgs, RUST_LOG};
 use run::run_command;
 use std::process;
 
@@ -33,7 +33,7 @@ async fn main() {
         .compact()
         .init();
 
-    let args = Args::parse();
+    let args = CliArgs::parse();
 
     if let Err(e) = run_command(args).await {
         eprintln!("Application error: {e}");

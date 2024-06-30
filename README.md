@@ -62,8 +62,9 @@ All clients are managed via the CLI only.
 
 ```bash
 ./files-rs clients list
-./files-rs clients create
+./files-rs clients create name
 ./files-rs clients disable client_id
+./files-rs clients enable client_id
 ./files-rs clients delete client_id
 ```
 
@@ -81,6 +82,7 @@ Teams are managed via CLI only as well.
 ```bash
 ./files-rs users list client_id
 ./files-rs users create client_id
+./files-rs users enable client_id
 ./files-rs users disable client_id
 ./files-rs users delete client_id username
 ```

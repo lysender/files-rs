@@ -78,7 +78,7 @@ impl Config {
 /// File Management in the cloud
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
-pub struct Args {
+pub struct CliArgs {
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -89,17 +89,45 @@ pub enum Commands {
     Server,
 
     /// Manages clients
-    Clients,
+    #[command(subcommand)]
+    Clients(ClientCommand),
 
     /// Manages client users
-    Users,
+    #[command(subcommand)]
+    Users(UserCommand),
 
     /// Manages client buckets
-    Buckets,
+    #[command(subcommand)]
+    Buckets(BucketCommand),
 
     /// Checks health of the API server
     CheckHealth,
 
     /// Generates a login credential
     GenerateLogin,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ClientCommand {
+    List,
+    Create,
+    Enable,
+    Disable,
+    Delete,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum UserCommand {
+    List,
+    Create,
+    Enable,
+    Disable,
+    Delete,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum BucketCommand {
+    List,
+    Create,
+    Delete,
 }
