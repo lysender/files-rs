@@ -5,6 +5,7 @@ use std::process;
 
 mod auth;
 mod buckets;
+mod clients;
 mod config;
 mod db;
 mod dirs;
@@ -14,6 +15,7 @@ mod health;
 mod run;
 mod schema;
 mod storage;
+mod users;
 mod util;
 mod validators;
 mod web;
