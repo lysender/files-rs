@@ -6,8 +6,8 @@ use axum::{
 
 use crate::{
     buckets::{
-        create_bucket, delete_bucket, get_bucket, list_buckets, update_bucket, Bucket,
-        ListBucketsParams, NewBucket, UpdateBucket,
+        create_bucket, delete_bucket, get_bucket, list_buckets, Bucket, ListBucketsParams,
+        NewBucket,
     },
     web::{response::JsonResponse, server::AppState},
     Error, Result,
@@ -41,24 +41,6 @@ pub async fn create_bucket_handler(
 pub async fn get_bucket_handler(Extension(bucket): Extension<Bucket>) -> Result<JsonResponse> {
     // Extract bucket from the middleware extension
     Ok(JsonResponse::new(serde_json::to_string(&bucket).unwrap()))
-}
-
-pub async fn update_bucket_handler(
-    State(state): State<AppState>,
-    Extension(bucket): Extension<Bucket>,
-    Path(bucket_id): Path<String>,
-    payload: Option<Json<UpdateBucket>>,
-) -> Result<JsonResponse> {
-    let Some(data) = payload else {
-        return Err(Error::BadRequest("Invalid request payload".to_string()));
-    };
-    let updated = update_bucket(&state.db_pool, &bucket_id, &data).await?;
-
-    // Either return the updated bucket or the original one
-    match updated {
-        true => get_bucket_as_response(&state, &bucket_id).await,
-        false => Ok(JsonResponse::new(serde_json::to_string(&bucket).unwrap())),
-    }
 }
 
 async fn get_bucket_as_response(state: &AppState, id: &str) -> Result<JsonResponse> {

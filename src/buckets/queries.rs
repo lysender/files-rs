@@ -6,7 +6,7 @@ use diesel::{QueryDsl, SelectableHelper};
 use tracing::error;
 use validator::Validate;
 
-use crate::buckets::{Bucket, NewBucket, UpdateBucket};
+use crate::buckets::{Bucket, NewBucket};
 use crate::dirs::count_bucket_dirs;
 use crate::schema::buckets::{self, dsl};
 use crate::storage::read_bucket;
@@ -64,8 +64,7 @@ pub async fn list_buckets(
             if let Some(keyword) = params_copy.keyword {
                 if keyword.len() > 0 {
                     let pattern = format!("%{}%", keyword);
-                    query =
-                        query.filter(dsl::name.like(pattern.clone()).or(dsl::label.like(pattern)));
+                    query = query.filter(dsl::name.like(pattern));
                 }
             }
 
@@ -73,7 +72,7 @@ pub async fn list_buckets(
                 .limit(per_page as i64)
                 .offset(offset)
                 .select(Bucket::as_select())
-                .order(dsl::label.asc())
+                .order(dsl::name.asc())
                 .load::<Bucket>(conn)
         })
         .await;
@@ -112,8 +111,7 @@ async fn list_buckets_count(
             if let Some(keyword) = params_copy.keyword {
                 if keyword.len() > 0 {
                     let pattern = format!("%{}%", keyword);
-                    query =
-                        query.filter(dsl::name.like(pattern.clone()).or(dsl::label.like(pattern)));
+                    query = query.filter(dsl::name.like(pattern));
                 }
             }
             query.select(count_star()).get_result::<i64>(conn)
@@ -171,7 +169,6 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) ->
         id: generate_id(),
         client_id: client_id.to_string(),
         name: data_copy.name,
-        label: data_copy.label,
     };
 
     let bucket_copy = bucket.clone();
@@ -287,46 +284,6 @@ pub async fn count_client_buckets(db_pool: &Pool, client_id: &str) -> Result<i64
             Err(e) => {
                 error!("{}", e);
                 Err("Error counting buckets".into())
-            }
-        },
-        Err(e) => {
-            error!("{}", e);
-            Err("Error using the db connection".into())
-        }
-    }
-}
-
-pub async fn update_bucket(db_pool: &Pool, id: &str, data: &UpdateBucket) -> Result<bool> {
-    let Ok(db) = db_pool.get().await else {
-        return Err("Error getting db connection".into());
-    };
-
-    if let Err(errors) = data.validate() {
-        return Err(Error::ValidationError(flatten_errors(&errors)));
-    }
-
-    // Do not update if there is no data to update
-    if data.label.is_none() {
-        return Ok(false);
-    }
-
-    let data_copy = data.clone();
-    let bucket_id = id.to_string();
-    let conn_result = db
-        .interact(move |conn| {
-            diesel::update(dsl::buckets)
-                .filter(dsl::id.eq(bucket_id.as_str()))
-                .set(data_copy)
-                .execute(conn)
-        })
-        .await;
-
-    match conn_result {
-        Ok(update_res) => match update_res {
-            Ok(item) => Ok(item > 0),
-            Err(e) => {
-                error!("{}", e);
-                Err("Error updating bucket".into())
             }
         },
         Err(e) => {

@@ -9,7 +9,6 @@ pub struct Bucket {
     pub id: String,
     pub client_id: String,
     pub name: String,
-    pub label: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Validate)]
@@ -17,16 +16,6 @@ pub struct NewBucket {
     #[validate(length(min = 1, max = 50))]
     #[validate(custom(function = "crate::validators::sluggable"))]
     pub name: String,
-
-    #[validate(length(min = 1, max = 100))]
-    pub label: String,
-}
-
-#[derive(Debug, Clone, Deserialize, Validate, AsChangeset)]
-#[diesel(table_name = crate::schema::buckets)]
-pub struct UpdateBucket {
-    #[validate(length(min = 1, max = 100))]
-    pub label: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Validate)]
@@ -49,19 +38,16 @@ mod tests {
     fn test_new_bucket() {
         let data = NewBucket {
             name: "hello-world".to_string(),
-            label: "Hello World".to_string(),
         };
         assert!(data.validate().is_ok());
 
         let data = NewBucket {
             name: "hello_world".to_string(),
-            label: "Hello World".to_string(),
         };
         assert!(data.validate().is_err());
 
         let data = NewBucket {
             name: "".to_string(),
-            label: "Hello World".to_string(),
         };
         assert!(data.validate().is_err());
     }

@@ -7,7 +7,7 @@ use tracing::error;
 use validator::Validate;
 
 use crate::dirs::{Dir, NewDir, UpdateDir};
-use crate::schema::directories::{self, dsl};
+use crate::schema::dirs::{self, dsl};
 use crate::util::generate_id;
 use crate::validators::flatten_errors;
 use crate::web::pagination::Paginated;
@@ -56,7 +56,7 @@ pub async fn list_dirs(
     let params_copy = params.clone();
     let conn_result = db
         .interact(move |conn| {
-            let mut query = dsl::directories.into_boxed();
+            let mut query = dsl::dirs.into_boxed();
             query = query.filter(dsl::bucket_id.eq(bid.as_str()));
 
             if let Some(keyword) = params_copy.keyword {
@@ -100,7 +100,7 @@ async fn list_dirs_count(db_pool: &Pool, bucket_id: &str, params: &ListDirsParam
 
     let conn_result = db
         .interact(move |conn| {
-            let mut query = dsl::directories.into_boxed();
+            let mut query = dsl::dirs.into_boxed();
             query = query.filter(dsl::bucket_id.eq(bid.as_str()));
             if let Some(keyword) = params_copy.keyword {
                 if keyword.len() > 0 {
@@ -160,7 +160,6 @@ pub async fn create_dir(db_pool: &Pool, bucket_id: &str, data: &NewDir) -> Resul
     let today = chrono::Utc::now().timestamp();
     let dir = Dir {
         id: generate_id(),
-        dir_type: "files".to_string(),
         bucket_id: bucket_id.to_string(),
         name: data_copy.name,
         label: data_copy.label,
@@ -172,7 +171,7 @@ pub async fn create_dir(db_pool: &Pool, bucket_id: &str, data: &NewDir) -> Resul
     let dir_copy = dir.clone();
     let conn_result = db
         .interact(move |conn| {
-            diesel::insert_into(directories::table)
+            diesel::insert_into(dirs::table)
                 .values(&dir_copy)
                 .execute(conn)
         })
@@ -201,7 +200,7 @@ pub async fn get_dir(pool: &Pool, id: &str) -> Result<Option<Dir>> {
     let did = id.to_string();
     let conn_result = db
         .interact(move |conn| {
-            dsl::directories
+            dsl::dirs
                 .find(did)
                 .select(Dir::as_select())
                 .first::<Dir>(conn)
@@ -233,7 +232,7 @@ pub async fn find_bucket_dir(pool: &Pool, bucket_id: &str, name: &str) -> Result
     let name_copy = name.to_string();
     let conn_result = db
         .interact(move |conn| {
-            dsl::directories
+            dsl::dirs
                 .filter(dsl::bucket_id.eq(bid.as_str()))
                 .filter(dsl::name.eq(name_copy.as_str()))
                 .select(Dir::as_select())
@@ -265,7 +264,7 @@ pub async fn count_bucket_dirs(db_pool: &Pool, bucket_id: &str) -> Result<i64> {
     let bid = bucket_id.to_string();
     let conn_result = db
         .interact(move |conn| {
-            dsl::directories
+            dsl::dirs
                 .filter(dsl::bucket_id.eq(bid.as_str()))
                 .select(count_star())
                 .get_result::<i64>(conn)
@@ -305,7 +304,7 @@ pub async fn update_dir(db_pool: &Pool, id: &str, data: &UpdateDir) -> Result<bo
     let dir_id = id.to_string();
     let conn_result = db
         .interact(move |conn| {
-            diesel::update(dsl::directories)
+            diesel::update(dsl::dirs)
                 .filter(dsl::id.eq(dir_id.as_str()))
                 .set(data_copy)
                 .execute(conn)
@@ -335,7 +334,7 @@ pub async fn delete_dir(db_pool: &Pool, id: &str) -> Result<()> {
     let dir_id = id.to_string();
     let conn_result = db
         .interact(move |conn| {
-            diesel::delete(dsl::directories.filter(dsl::id.eq(dir_id.as_str()))).execute(conn)
+            diesel::delete(dsl::dirs.filter(dsl::id.eq(dir_id.as_str()))).execute(conn)
         })
         .await;
 

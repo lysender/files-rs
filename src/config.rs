@@ -88,6 +88,15 @@ pub enum Commands {
     /// Runs the API server
     Server,
 
+    /// Manages clients
+    Clients,
+
+    /// Manages client users
+    Users,
+
+    /// Manages client buckets
+    Buckets,
+
     /// Checks health of the API server
     CheckHealth,
 

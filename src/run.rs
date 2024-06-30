@@ -10,6 +10,9 @@ use crate::{auth::generate_admin_hash, Result};
 pub async fn run_command(args: Args) -> Result<()> {
     match args.command {
         Commands::Server => run_server().await,
+        Commands::Clients => manage_clients().await,
+        Commands::Buckets => manage_buckets().await,
+        Commands::Users => manage_users().await,
         Commands::CheckHealth => check_health().await,
         Commands::GenerateLogin => generate_login(),
     }
@@ -21,6 +24,21 @@ pub async fn run_server() -> Result<()> {
         process::exit(1);
     });
     run_web_server(config).await
+}
+
+pub async fn manage_clients() -> Result<()> {
+    println!("Manage clients");
+    Ok(())
+}
+
+pub async fn manage_buckets() -> Result<()> {
+    println!("Manage buckets");
+    Ok(())
+}
+
+pub async fn manage_users() -> Result<()> {
+    println!("Manage users");
+    Ok(())
 }
 
 pub async fn check_health() -> Result<()> {
