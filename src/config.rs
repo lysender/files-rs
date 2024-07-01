@@ -102,9 +102,6 @@ pub enum Commands {
 
     /// Checks health of the API server
     CheckHealth,
-
-    /// Generates a login credential
-    GenerateLogin,
 }
 
 #[derive(Subcommand, Debug)]

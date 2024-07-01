@@ -22,6 +22,7 @@ pub enum Error {
     HashPasswordError(String),
     VerifyPasswordHashError(String),
     InvalidPassword,
+    InactiveUser,
     Base64DecodeError(String),
     ConfigError(String),
 }
@@ -48,6 +49,7 @@ impl core::fmt::Display for Error {
             Self::HashPasswordError(val) => write!(f, "{}", val),
             Self::VerifyPasswordHashError(val) => write!(f, "{}", val),
             Self::InvalidPassword => write!(f, "Invalid password"),
+            Self::InactiveUser => write!(f, "Inactive user"),
             Self::Base64DecodeError(val) => write!(f, "{}", val),
             Self::ConfigError(val) => write!(f, "{}", val),
         }

@@ -6,7 +6,7 @@ use crate::db::create_db_pool;
 use crate::health::check_readiness;
 use crate::users::run_user_command;
 use crate::web::server::run_web_server;
-use crate::{auth::generate_admin_hash, Result};
+use crate::Result;
 
 pub async fn run_command(args: CliArgs) -> Result<()> {
     match args.command {
@@ -15,7 +15,6 @@ pub async fn run_command(args: CliArgs) -> Result<()> {
         Commands::Buckets(cmd) => run_bucket_command(cmd).await,
         Commands::Users(cmd) => run_user_command(cmd).await,
         Commands::CheckHealth => check_health().await,
-        Commands::GenerateLogin => generate_login(),
     }
 }
 
@@ -33,8 +32,4 @@ pub async fn check_health() -> Result<()> {
     println!("  Secrets: {}", health.checks.secrets);
 
     Ok(())
-}
-
-fn generate_login() -> Result<()> {
-    generate_admin_hash()
 }

@@ -8,6 +8,7 @@ use crate::{Error, Result};
 #[derive(Debug, Deserialize, Serialize)]
 struct Claims {
     sub: String,
+    cid: String,
     scope: String,
     exp: usize,
 }
@@ -20,6 +21,7 @@ pub fn create_auth_token(actor: &Actor, secret: &str) -> Result<String> {
 
     let claims = Claims {
         sub: actor.id.clone(),
+        cid: actor.client_id.clone(),
         scope: actor.scope.clone(),
         exp: exp.timestamp() as usize,
     };
@@ -53,6 +55,7 @@ pub fn verify_auth_token(token: &str, secret: &str) -> Result<Actor> {
 
     Ok(Actor {
         id: decoded.claims.sub,
+        client_id: decoded.claims.cid,
         scope: decoded.claims.scope,
     })
 }
@@ -66,6 +69,7 @@ mod tests {
         // Generate token
         let actor = Actor {
             id: "thor01".to_string(),
+            client_id: "client01".to_string(),
             scope: "auth files".to_string(),
         };
         let token = create_auth_token(&actor, "secret").unwrap();
@@ -74,6 +78,7 @@ mod tests {
         // Validate it back
         let actor = verify_auth_token(&token, "secret").unwrap();
         assert_eq!(actor.id, "thor01".to_string());
+        assert_eq!(actor.client_id, "client01".to_string());
         assert_eq!(actor.scope, "auth files".to_string());
     }
 
