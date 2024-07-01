@@ -12,6 +12,7 @@ mod dirs;
 mod error;
 mod files;
 mod health;
+mod roles;
 mod run;
 mod schema;
 mod storage;

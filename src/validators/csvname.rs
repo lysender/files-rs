@@ -1,4 +1,5 @@
 use core::result::Result;
+use std::collections::HashSet;
 use validator::ValidationError;
 
 use super::sluggable;
@@ -8,12 +9,25 @@ pub fn csvname(value: &str) -> Result<(), ValidationError> {
         return Err(ValidationError::new("csvname"));
     }
 
-    let valid = value.split(",").all(|chunk| {
+    let chunks: Vec<&str> = value.split(",").collect();
+    let chunks_len = chunks.len();
+    if chunks_len == 0 {
+        return Err(ValidationError::new("csvname"));
+    }
+
+    // Validate that all parts are sluggable
+    let valid = chunks.iter().all(|chunk| {
         if chunk.len() == 0 {
             return false;
         }
         sluggable(chunk).is_ok()
     });
+
+    // Should contain no duplicate
+    let list: HashSet<&str> = chunks.into_iter().collect();
+    if list.len() != chunks_len {
+        return Err(ValidationError::new("csvname"));
+    }
 
     match valid {
         true => Ok(()),
@@ -34,5 +48,7 @@ mod tests {
         assert!(csvname(",").is_err());
         assert!(csvname(",,").is_err());
         assert!(csvname("").is_err());
+        assert!(csvname("foo,bar,baz").is_ok());
+        assert!(csvname("foo,bar,foo").is_err());
     }
 }

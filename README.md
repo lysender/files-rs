@@ -4,12 +4,12 @@ Simple file storage service written in Rust
 
 ## Objectives
 
-- [ ] Serves JSON API endpoints to manage files
-- [ ] Multi-tenant support
-- [ ] Multi-bucket support
-- [ ] Supports Google Cloud Storage for now
-- [ ] SQLite for database
-- [ ] Simple JWT authentication
+- [x] Serves JSON API endpoints to manage files
+- [x] Multi-tenant support
+- [x] Multi-bucket support
+- [x] Supports Google Cloud Storage for now
+- [x] SQLite for database
+- [x] Simple JWT authentication
 
 ## Workflow
 
