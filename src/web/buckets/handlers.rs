@@ -1,13 +1,17 @@
 use axum::{extract::State, Extension};
 
 use crate::{
+    auth::Actor,
     buckets::{list_buckets, Bucket},
     web::{response::JsonResponse, server::AppState},
     Result,
 };
 
-pub async fn list_buckets_handler(State(state): State<AppState>) -> Result<JsonResponse> {
-    let buckets = list_buckets(&state.db_pool, &state.config.client_id).await?;
+pub async fn list_buckets_handler(
+    State(state): State<AppState>,
+    Extension(actor): Extension<Actor>,
+) -> Result<JsonResponse> {
+    let buckets = list_buckets(&state.db_pool, &actor.client_id).await?;
     Ok(JsonResponse::new(serde_json::to_string(&buckets).unwrap()))
 }
 
