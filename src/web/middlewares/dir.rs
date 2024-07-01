@@ -8,14 +8,15 @@ use axum::{
 };
 
 use crate::{
-    auth::Actor,
+    auth::ActorDto,
     dirs::get_dir,
+    roles::{has_permissions, Permission},
     web::{params::Params, response::create_error_response, server::AppState},
 };
 
 pub async fn dir_middleware(
     state: State<AppState>,
-    Extension(actor): Extension<Actor>,
+    Extension(actor): Extension<ActorDto>,
     Path(params): Path<Params>,
     mut request: Request,
     next: Next,
@@ -24,6 +25,15 @@ pub async fn dir_middleware(
         return create_error_response(
             StatusCode::FORBIDDEN,
             "Insufficient auth scope".to_string(),
+            "Forbidden".to_string(),
+        );
+    }
+
+    let permissions = vec![Permission::DirsList, Permission::DirsView];
+    if !has_permissions(&actor.user.roles, &permissions) {
+        return create_error_response(
+            StatusCode::FORBIDDEN,
+            "Insufficient permissions".to_string(),
             "Forbidden".to_string(),
         );
     }

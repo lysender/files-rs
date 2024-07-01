@@ -2,6 +2,8 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
+use crate::roles::{to_roles, Role};
+
 #[derive(Debug, Clone, Queryable, Selectable, Insertable, Serialize)]
 #[diesel(table_name = crate::schema::users)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
@@ -22,19 +24,21 @@ pub struct UserDto {
     pub client_id: String,
     pub username: String,
     pub status: String,
-    pub roles: String,
+    pub roles: Vec<Role>,
     pub created_at: i64,
     pub updated_at: i64,
 }
 
 impl From<User> for UserDto {
     fn from(user: User) -> Self {
+        let role_list = user.roles.split(",").map(|item| item.to_string()).collect();
+        let roles = to_roles(role_list).expect("Invalid roles");
         UserDto {
             id: user.id,
             client_id: user.client_id,
             username: user.username,
             status: user.status,
-            roles: user.roles,
+            roles,
             created_at: user.created_at,
             updated_at: user.updated_at,
         }

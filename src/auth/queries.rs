@@ -1,7 +1,8 @@
 use validator::Validate;
 
 use super::{
-    create_auth_token, verify_auth_token, verify_password, Actor, AuthResponse, Credentials,
+    create_auth_token, verify_auth_token, verify_password, Actor, ActorDto, AuthResponse,
+    Credentials,
 };
 
 use crate::{
@@ -58,8 +59,11 @@ pub async fn authenticate(state: &AppState, credentials: &Credentials) -> Result
     })
 }
 
-pub async fn authenticate_token(state: &AppState, token: &str) -> Result<Actor> {
+pub async fn authenticate_token(state: &AppState, token: &str) -> Result<ActorDto> {
     let actor = verify_auth_token(token, &state.config.jwt_secret)?;
+    if !actor.scope.contains("auth") {
+        return Err(Error::InsufficientAuthScope);
+    }
 
     // Validate client
     let db_pool = state.db_pool.clone();
@@ -71,10 +75,17 @@ pub async fn authenticate_token(state: &AppState, token: &str) -> Result<Actor> 
         return Err(Error::InvalidClient);
     }
     let user = get_user(&db_pool, &actor.id).await?;
-    if user.is_none() {
+    let Some(user) = user else {
+        return Err(Error::UserNotFound);
+    };
+    if &user.client_id != &client.id {
         return Err(Error::UserNotFound);
     }
 
-    // We don't need the actual client and user object for now
-    Ok(actor)
+    Ok(ActorDto {
+        id: actor.id,
+        client_id: actor.client_id,
+        scope: actor.scope,
+        user: user.into(),
+    })
 }

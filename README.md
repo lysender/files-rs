@@ -10,6 +10,10 @@ Simple file storage service written in Rust
 - [x] Supports Google Cloud Storage for now
 - [x] SQLite for database
 - [x] Simple JWT authentication
+- [x] Tenanats/clients management via CLI
+- [x] Teams/users management via CLI
+- [x] Buckets management via CLI
+- [ ] Role based authorization
 
 ## Workflow
 

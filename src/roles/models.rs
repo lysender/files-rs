@@ -1,12 +1,17 @@
-#[derive(PartialEq, Debug, Clone)]
+use serde::Serialize;
+
+#[derive(PartialEq, Debug, Clone, Serialize)]
 pub enum Role {
     FilesAdmin,
     FilesEditor,
     FilesViewer,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Serialize)]
 pub enum Permission {
+    BucketsList,
+    BucketsView,
+
     DirsCreate,
     DirsEdit,
     DirsDelete,
@@ -54,6 +59,8 @@ impl TryFrom<&str> for Permission {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
+            "buckets.list" => Ok(Permission::BucketsList),
+            "buckets.view" => Ok(Permission::BucketsView),
             "dirs.create" => Ok(Permission::DirsCreate),
             "dirs.edit" => Ok(Permission::DirsEdit),
             "dirs.delete" => Ok(Permission::DirsDelete),
@@ -75,6 +82,8 @@ impl TryFrom<&str> for Permission {
 pub fn role_permissions(role: &Role) -> Vec<Permission> {
     match role {
         Role::FilesAdmin => vec![
+            Permission::BucketsList,
+            Permission::BucketsView,
             Permission::DirsCreate,
             Permission::DirsEdit,
             Permission::DirsDelete,
@@ -89,6 +98,8 @@ pub fn role_permissions(role: &Role) -> Vec<Permission> {
             Permission::FilesManage,
         ],
         Role::FilesEditor => vec![
+            Permission::BucketsList,
+            Permission::BucketsView,
             Permission::DirsList,
             Permission::DirsView,
             Permission::FilesCreate,
@@ -96,6 +107,8 @@ pub fn role_permissions(role: &Role) -> Vec<Permission> {
             Permission::FilesView,
         ],
         Role::FilesViewer => vec![
+            Permission::BucketsList,
+            Permission::BucketsView,
             Permission::DirsList,
             Permission::DirsView,
             Permission::FilesList,

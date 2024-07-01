@@ -10,6 +10,14 @@ pub struct Actor {
     pub scope: String,
 }
 
+#[derive(Clone)]
+pub struct ActorDto {
+    pub id: String,
+    pub client_id: String,
+    pub scope: String,
+    pub user: UserDto,
+}
+
 #[derive(Deserialize, Serialize, Validate)]
 pub struct Credentials {
     #[validate(length(equal = 32))]
