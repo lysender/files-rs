@@ -31,10 +31,17 @@ fn error_to_string(error: &ValidationError) -> String {
     match error.code.as_ref() {
         "email" => "invalid email".to_string(),
         "url" => "invalid url".to_string(),
-        "length" => match (error.params.get("min"), error.params.get("max")) {
-            (Some(min), Some(max)) => format!("must be between {} and {} characters", min, max),
-            (Some(min), None) => format!("must be at least {} characters", min),
-            (None, Some(max)) => format!("must be at most {} characters", max),
+        "length" => match (
+            error.params.get("min"),
+            error.params.get("max"),
+            error.params.get("equal"),
+        ) {
+            (Some(min), Some(max), None) => {
+                format!("must be between {} and {} characters", min, max)
+            }
+            (Some(min), None, None) => format!("must be at least {} characters", min),
+            (None, Some(max), None) => format!("must be at most {} characters", max),
+            (None, None, Some(equal)) => format!("must be be {} characters", equal),
             _ => "invalid length".to_string(),
         },
         "range" => match (error.params.get("min"), error.params.get("max")) {

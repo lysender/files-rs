@@ -16,6 +16,31 @@ pub struct User {
     pub updated_at: i64,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct UserDto {
+    pub id: String,
+    pub client_id: String,
+    pub username: String,
+    pub status: String,
+    pub roles: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+impl From<User> for UserDto {
+    fn from(user: User) -> Self {
+        UserDto {
+            id: user.id,
+            client_id: user.client_id,
+            username: user.username,
+            status: user.status,
+            roles: user.roles,
+            created_at: user.created_at,
+            updated_at: user.updated_at,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Validate)]
 pub struct NewUser {
     #[validate(length(min = 1, max = 30))]

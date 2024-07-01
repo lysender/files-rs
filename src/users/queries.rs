@@ -69,7 +69,7 @@ pub async fn create_user(db_pool: &Pool, client_id: &str, data: &NewUser) -> Res
     };
 
     // Username must be unique
-    if let Some(_) = find_user_by_username(db_pool, client_id, &data.username).await? {
+    if let Some(_) = find_user_by_username(db_pool, &data.username).await? {
         return Err(Error::ValidationError(
             "Username already exists".to_string(),
         ));
@@ -145,21 +145,15 @@ pub async fn get_user(pool: &Pool, id: &str) -> Result<Option<User>> {
     }
 }
 
-pub async fn find_user_by_username(
-    pool: &Pool,
-    client_id: &str,
-    username: &str,
-) -> Result<Option<User>> {
+pub async fn find_user_by_username(pool: &Pool, username: &str) -> Result<Option<User>> {
     let Ok(db) = pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
-    let client_id = client_id.to_string();
     let username = username.to_string();
     let conn_result = db
         .interact(move |conn| {
             dsl::users
-                .filter(dsl::client_id.eq(&client_id))
                 .filter(dsl::username.eq(&username))
                 .select(User::as_select())
                 .first::<User>(conn)
