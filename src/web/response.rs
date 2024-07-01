@@ -114,7 +114,7 @@ pub fn to_error_response(error: Error) -> Response<Body> {
         ),
         Error::UserNotFound => create_error_response(
             StatusCode::UNAUTHORIZED,
-            "Invalid username or password".to_string(),
+            "Unauthorized".to_string(),
             "Unauthorized".to_string(),
         ),
         Error::Base64DecodeError(message) => create_error_response(
