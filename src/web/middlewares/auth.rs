@@ -59,8 +59,11 @@ pub async fn require_auth_middleware(
     request: Request,
     next: Next,
 ) -> Response<Body> {
-    if actor.is_none() {
+    let Some(actor) = actor else {
         return to_error_response(Error::NoAuthToken);
+    };
+    if !actor.scope.contains("auth") {
+        return to_error_response(Error::InsufficientAuthScope);
     }
 
     next.run(request).await

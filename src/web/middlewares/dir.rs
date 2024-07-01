@@ -4,19 +4,30 @@ use axum::{
     http::StatusCode,
     middleware::Next,
     response::Response,
+    Extension,
 };
 
 use crate::{
+    auth::Actor,
     dirs::get_dir,
     web::{params::Params, response::create_error_response, server::AppState},
 };
 
 pub async fn dir_middleware(
     state: State<AppState>,
+    Extension(actor): Extension<Actor>,
     Path(params): Path<Params>,
     mut request: Request,
     next: Next,
 ) -> Response<Body> {
+    if !actor.scope.contains("files") {
+        return create_error_response(
+            StatusCode::FORBIDDEN,
+            "Insufficient auth scope".to_string(),
+            "Forbidden".to_string(),
+        );
+    }
+
     let did = params.dir_id.clone().expect("dir_id is required");
     let query_res = get_dir(&state.db_pool, &did).await;
     let Ok(dir_res) = query_res else {

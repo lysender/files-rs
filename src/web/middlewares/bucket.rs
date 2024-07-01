@@ -21,6 +21,14 @@ pub async fn bucket_middleware(
     mut request: Request,
     next: Next,
 ) -> Response<Body> {
+    if !actor.scope.contains("files") {
+        return create_error_response(
+            StatusCode::FORBIDDEN,
+            "Insufficient auth scope".to_string(),
+            "Forbidden".to_string(),
+        );
+    }
+
     if !valid_id(&params.bucket_id) {
         return create_error_response(
             StatusCode::BAD_REQUEST,
