@@ -5,7 +5,7 @@ use axum::{
 };
 
 use crate::{
-    buckets::{create_bucket, delete_bucket, get_bucket, list_buckets, Bucket, NewBucket},
+    buckets::{create_bucket, delete_bucket, list_buckets, Bucket, NewBucket},
     web::{response::JsonResponse, server::AppState},
     Error, Result,
 };
@@ -31,19 +31,6 @@ pub async fn create_bucket_handler(
 
 pub async fn get_bucket_handler(Extension(bucket): Extension<Bucket>) -> Result<JsonResponse> {
     // Extract bucket from the middleware extension
-    Ok(JsonResponse::new(serde_json::to_string(&bucket).unwrap()))
-}
-
-async fn get_bucket_as_response(state: &AppState, id: &str) -> Result<JsonResponse> {
-    let res = get_bucket(&state.db_pool, id).await;
-    let Ok(bucket_res) = res else {
-        return Err("Error getting bucket".into());
-    };
-
-    let Some(bucket) = bucket_res else {
-        return Err("Error getting bucket this time".into());
-    };
-
     Ok(JsonResponse::new(serde_json::to_string(&bucket).unwrap()))
 }
 
