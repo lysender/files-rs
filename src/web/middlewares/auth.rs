@@ -8,7 +8,7 @@ use axum::{
 };
 
 use crate::{
-    auth::{verify_auth_token, Actor},
+    auth::{authenticate_token, Actor},
     web::{response::to_error_response, server::AppState},
     Error,
 };
@@ -33,13 +33,16 @@ pub async fn auth_middleware(
             return to_error_response(Error::InvalidAuthToken);
         }
         let token = auth_header.replace("Bearer ", "");
-        let Ok(data) = verify_auth_token(&token, &state.config.jwt_secret) else {
-            return to_error_response(Error::InvalidAuthToken);
-        };
-        if &data.id != &state.config.client_id {
-            return to_error_response(Error::InvalidClient);
+
+        let res = authenticate_token(&state, &token).await;
+        match res {
+            Ok(data) => {
+                actor = Some(data);
+            }
+            Err(e) => {
+                return to_error_response(e);
+            }
         }
-        actor = Some(data);
     }
 
     if let Some(actor) = actor {

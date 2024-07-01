@@ -1,10 +1,15 @@
 use validator::Validate;
 
-use super::{create_auth_token, verify_password, Actor, AuthResponse, Credentials};
+use super::{
+    create_auth_token, verify_auth_token, verify_password, Actor, AuthResponse, Credentials,
+};
 
 use crate::{
-    clients::get_client, users::find_user_by_username, validators::flatten_errors,
-    web::server::AppState, Error, Result,
+    clients::get_client,
+    users::{find_user_by_username, get_user},
+    validators::flatten_errors,
+    web::server::AppState,
+    Error, Result,
 };
 
 pub async fn authenticate(state: &AppState, credentials: &Credentials) -> Result<AuthResponse> {
@@ -51,4 +56,25 @@ pub async fn authenticate(state: &AppState, credentials: &Credentials) -> Result
         user: user.into(),
         token,
     })
+}
+
+pub async fn authenticate_token(state: &AppState, token: &str) -> Result<Actor> {
+    let actor = verify_auth_token(token, &state.config.jwt_secret)?;
+
+    // Validate client
+    let db_pool = state.db_pool.clone();
+    let client = get_client(&db_pool, &actor.client_id).await?;
+    let Some(client) = client else {
+        return Err(Error::InvalidClient);
+    };
+    if &client.status != "active" {
+        return Err(Error::InvalidClient);
+    }
+    let user = get_user(&db_pool, &actor.id).await?;
+    if user.is_none() {
+        return Err(Error::UserNotFound);
+    }
+
+    // We don't need the actual client and user object for now
+    Ok(actor)
 }
