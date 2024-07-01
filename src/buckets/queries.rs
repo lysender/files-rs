@@ -12,65 +12,20 @@ use crate::schema::buckets::{self, dsl};
 use crate::storage::read_bucket;
 use crate::util::generate_id;
 use crate::validators::flatten_errors;
-use crate::web::pagination::Paginated;
 use crate::{Error, Result};
 
-use super::ListBucketsParams;
+const MAX_BUCKETS_PER_CLIENT: i32 = 50;
 
-const MAX_BUCKETS: i32 = 10;
-const MAX_PER_PAGE: i32 = 50;
-
-pub async fn list_buckets(
-    db_pool: &Pool,
-    client_id: &str,
-    params: &ListBucketsParams,
-) -> Result<Paginated<Bucket>> {
-    if let Err(errors) = params.validate() {
-        return Err(Error::ValidationError(flatten_errors(&errors)));
-    }
+pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Vec<Bucket>> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
-    let cid = client_id.to_string();
-
-    let total_records = list_buckets_count(db_pool, client_id, params).await?;
-    let mut page: i32 = 1;
-    let mut per_page: i32 = MAX_PER_PAGE;
-    let mut offset: i64 = 0;
-
-    if let Some(per_page_param) = params.per_page {
-        if per_page_param > 0 && per_page_param <= MAX_PER_PAGE {
-            per_page = per_page_param;
-        }
-    }
-
-    let total_pages: i64 = (total_records as f64 / per_page as f64).ceil() as i64;
-
-    if let Some(p) = params.page {
-        let p64 = p as i64;
-        if p64 > 0 && p64 <= total_pages {
-            page = p;
-            offset = (p64 - 1) * per_page as i64;
-        }
-    }
-
-    let params_copy = params.clone();
+    let client_id = client_id.to_string();
     let conn_result = db
         .interact(move |conn| {
-            let mut query = dsl::buckets.into_boxed();
-            query = query.filter(dsl::client_id.eq(cid));
-
-            if let Some(keyword) = params_copy.keyword {
-                if keyword.len() > 0 {
-                    let pattern = format!("%{}%", keyword);
-                    query = query.filter(dsl::name.like(pattern));
-                }
-            }
-
-            query
-                .limit(per_page as i64)
-                .offset(offset)
+            dsl::buckets
+                .filter(dsl::client_id.eq(&client_id))
                 .select(Bucket::as_select())
                 .order(dsl::name.asc())
                 .load::<Bucket>(conn)
@@ -79,51 +34,10 @@ pub async fn list_buckets(
 
     match conn_result {
         Ok(select_res) => match select_res {
-            Ok(items) => Ok(Paginated::new(items, page, per_page, total_records)),
+            Ok(items) => Ok(items),
             Err(e) => {
                 error!("{}", e);
                 Err("Error reading buckets".into())
-            }
-        },
-        Err(e) => {
-            error!("{}", e);
-            Err("Error using the db connection".into())
-        }
-    }
-}
-
-async fn list_buckets_count(
-    db_pool: &Pool,
-    client_id: &str,
-    params: &ListBucketsParams,
-) -> Result<i64> {
-    let Ok(db) = db_pool.get().await else {
-        return Err("Error getting db connection".into());
-    };
-
-    let cid = client_id.to_string();
-    let params_copy = params.clone();
-
-    let conn_result = db
-        .interact(move |conn| {
-            let mut query = dsl::buckets.into_boxed();
-            query = query.filter(dsl::client_id.eq(cid.as_str()));
-            if let Some(keyword) = params_copy.keyword {
-                if keyword.len() > 0 {
-                    let pattern = format!("%{}%", keyword);
-                    query = query.filter(dsl::name.like(pattern));
-                }
-            }
-            query.select(count_star()).get_result::<i64>(conn)
-        })
-        .await;
-
-    match conn_result {
-        Ok(count_res) => match count_res {
-            Ok(count) => Ok(count),
-            Err(e) => {
-                error!("{}", e);
-                Err("Error counting buckets".into())
             }
         },
         Err(e) => {
@@ -145,7 +59,7 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) ->
     // Limit the number of buckets per client
     let _ = match count_client_buckets(db_pool, client_id).await {
         Ok(count) => {
-            if count >= MAX_BUCKETS as i64 {
+            if count >= MAX_BUCKETS_PER_CLIENT as i64 {
                 return Err(Error::ValidationError(
                     "Maximum number of buckets reached".to_string(),
                 ));
@@ -165,10 +79,12 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) ->
     let _ = read_bucket(&data.name).await?;
 
     let data_copy = data.clone();
+    let today = chrono::Utc::now().timestamp();
     let bucket = Bucket {
         id: generate_id(),
         client_id: client_id.to_string(),
         name: data_copy.name,
+        created_at: today,
     };
 
     let bucket_copy = bucket.clone();

@@ -1,26 +1,17 @@
 use axum::{
-    extract::{Json, Path, Query, State},
+    extract::{Json, Path, State},
     http::StatusCode,
     Extension,
 };
 
 use crate::{
-    buckets::{
-        create_bucket, delete_bucket, get_bucket, list_buckets, Bucket, ListBucketsParams,
-        NewBucket,
-    },
+    buckets::{create_bucket, delete_bucket, get_bucket, list_buckets, Bucket, NewBucket},
     web::{response::JsonResponse, server::AppState},
     Error, Result,
 };
 
-pub async fn list_buckets_handler(
-    State(state): State<AppState>,
-    query: Option<Query<ListBucketsParams>>,
-) -> Result<JsonResponse> {
-    let Some(params) = query else {
-        return Err(Error::BadRequest("Invalid query parameters".to_string()));
-    };
-    let buckets = list_buckets(&state.db_pool, &state.config.client_id, &params).await?;
+pub async fn list_buckets_handler(State(state): State<AppState>) -> Result<JsonResponse> {
+    let buckets = list_buckets(&state.db_pool, &state.config.client_id).await?;
     Ok(JsonResponse::new(serde_json::to_string(&buckets).unwrap()))
 }
 

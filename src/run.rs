@@ -1,8 +1,7 @@
-use std::process;
-
+use crate::buckets::run_bucket_command;
 use crate::clients::run_client_command;
-use crate::config::{BucketCommand, CliArgs};
-use crate::config::{Commands, Config};
+use crate::config::CliArgs;
+use crate::config::Commands;
 use crate::db::create_db_pool;
 use crate::health::check_readiness;
 use crate::users::run_user_command;
@@ -10,28 +9,14 @@ use crate::web::server::run_web_server;
 use crate::{auth::generate_admin_hash, Result};
 
 pub async fn run_command(args: CliArgs) -> Result<()> {
-    let config = Config::build().unwrap_or_else(|err| {
-        eprintln!("{err}");
-        process::exit(1);
-    });
     match args.command {
-        Commands::Server => run_server(config).await,
+        Commands::Server => run_web_server().await,
         Commands::Clients(cmd) => run_client_command(cmd).await,
-        Commands::Buckets(cmd) => manage_buckets(config, cmd).await,
+        Commands::Buckets(cmd) => run_bucket_command(cmd).await,
         Commands::Users(cmd) => run_user_command(cmd).await,
         Commands::CheckHealth => check_health().await,
         Commands::GenerateLogin => generate_login(),
     }
-}
-
-pub async fn run_server(config: Config) -> Result<()> {
-    run_web_server(config).await
-}
-
-pub async fn manage_buckets(config: Config, cmd: BucketCommand) -> Result<()> {
-    println!("Manage buckets");
-    println!("{:?}", cmd);
-    Ok(())
 }
 
 pub async fn check_health() -> Result<()> {

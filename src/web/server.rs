@@ -1,3 +1,5 @@
+use std::process;
+
 use axum::extract::{DefaultBodyLimit, FromRef};
 use axum::Router;
 use deadpool_diesel::sqlite::Pool;
@@ -18,7 +20,12 @@ pub struct AppState {
     pub db_pool: Pool,
 }
 
-pub async fn run_web_server(config: Config) -> Result<()> {
+pub async fn run_web_server() -> Result<()> {
+    let config = Config::build().unwrap_or_else(|err| {
+        eprintln!("{err}");
+        process::exit(1);
+    });
+
     let port = config.server.port;
 
     let pool = create_db_pool();

@@ -1,4 +1,4 @@
-use crate::config::{Config, UserCommand};
+use crate::config::UserCommand;
 use crate::db::create_db_pool;
 use crate::users::queries::{delete_user, list_users, update_user_password, update_user_status};
 use crate::Result;
