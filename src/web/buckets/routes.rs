@@ -6,13 +6,11 @@ use crate::web::{
     server::AppState,
 };
 
-use super::handlers::{
-    create_bucket_handler, delete_bucket_handler, get_bucket_handler, list_buckets_handler,
-};
+use super::handlers::{get_bucket_handler, list_buckets_handler};
 
 pub fn buckets_routes(state: AppState) -> Router<AppState> {
     Router::new()
-        .route("/", get(list_buckets_handler).post(create_bucket_handler))
+        .route("/", get(list_buckets_handler))
         .nest("/:bucket_id", inner_bucket_routes(state.clone()))
         .layer(middleware::from_fn_with_state(
             state.clone(),
@@ -23,7 +21,7 @@ pub fn buckets_routes(state: AppState) -> Router<AppState> {
 
 fn inner_bucket_routes(state: AppState) -> Router<AppState> {
     Router::new()
-        .route("/", get(get_bucket_handler).delete(delete_bucket_handler))
+        .route("/", get(get_bucket_handler))
         .nest("/dirs", dir_routes(state.clone()))
         .layer(middleware::from_fn_with_state(
             state.clone(),
