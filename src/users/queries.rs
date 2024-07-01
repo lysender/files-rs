@@ -7,6 +7,7 @@ use tracing::error;
 use validator::Validate;
 
 use crate::auth::hash_password;
+use crate::roles::{to_roles, Role};
 use crate::schema::users::{self, dsl};
 use crate::util::generate_id;
 use crate::validators::flatten_errors;
@@ -74,6 +75,11 @@ pub async fn create_user(db_pool: &Pool, client_id: &str, data: &NewUser) -> Res
             "Username already exists".to_string(),
         ));
     }
+
+    // Roles must be all valid
+    let roles: Vec<String> = data.roles.split(",").map(|item| item.to_string()).collect();
+    // Validate roles
+    let _ = to_roles(roles)?;
 
     let data_copy = data.clone();
     let today = chrono::Utc::now().timestamp();

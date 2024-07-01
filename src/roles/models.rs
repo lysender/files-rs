@@ -30,7 +30,10 @@ impl TryFrom<&str> for Role {
             "FilesAdmin" => Ok(Role::FilesAdmin),
             "FilesEditor" => Ok(Role::FilesEditor),
             "FilesViewer" => Ok(Role::FilesViewer),
-            _ => Err(format!("Invalid role: {}", value)),
+            _ => Err(format!(
+                "Valid roles are: FilesAdmin, FilesEditor, FilesViewer, got: {}",
+                value
+            )),
         }
     }
 }

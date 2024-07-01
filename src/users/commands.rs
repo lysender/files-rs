@@ -26,8 +26,8 @@ async fn run_list_users(client_id: String) -> Result<()> {
     let users = list_users(&db_pool, &client_id).await?;
     for user in users.iter() {
         println!(
-            "ID: {}, Username: {}, Status: {}",
-            user.id, user.username, user.status
+            "ID: {}, Username: {}, Roles: {}, Status: {}",
+            user.id, user.username, user.roles, user.status
         );
     }
     Ok(())
