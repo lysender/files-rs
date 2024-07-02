@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::users::UserDto;
+use crate::{
+    roles::{has_permissions, Permission, Role},
+    users::UserDto,
+};
 
 #[derive(Clone)]
 pub struct ActorPayload {
@@ -16,6 +19,28 @@ pub struct Actor {
     pub client_id: String,
     pub scope: String,
     pub user: UserDto,
+}
+
+impl Actor {
+    pub fn has_auth_scope(&self) -> bool {
+        self.scope.contains("auth")
+    }
+
+    pub fn has_files_scope(&self) -> bool {
+        self.scope.contains("files")
+    }
+
+    pub fn has_scope(&self, scope: &str) -> bool {
+        self.scope.contains(scope)
+    }
+
+    pub fn has_roles(&self, roles: &Vec<Role>) -> bool {
+        roles.iter().all(|role| self.user.roles.contains(role))
+    }
+
+    pub fn has_permissions(&self, permissions: &Vec<Permission>) -> bool {
+        has_permissions(&self.user.roles, &permissions)
+    }
 }
 
 #[derive(Deserialize, Serialize, Validate)]

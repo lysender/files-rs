@@ -10,7 +10,7 @@ use axum::{
 use crate::{
     auth::Actor,
     buckets::get_bucket,
-    roles::{has_permissions, Permission},
+    roles::Permission,
     util::valid_id,
     web::{params::Params, response::create_error_response, server::AppState},
 };
@@ -22,7 +22,7 @@ pub async fn bucket_middleware(
     mut request: Request,
     next: Next,
 ) -> Response<Body> {
-    if !actor.scope.contains("files") {
+    if !actor.has_files_scope() {
         return create_error_response(
             StatusCode::FORBIDDEN,
             "Insufficient auth scope".to_string(),
@@ -30,7 +30,7 @@ pub async fn bucket_middleware(
         );
     }
     let permissions = vec![Permission::BucketsList, Permission::BucketsView];
-    if !has_permissions(&actor.user.roles, &permissions) {
+    if !actor.has_permissions(&permissions) {
         return create_error_response(
             StatusCode::FORBIDDEN,
             "Insufficient permissions".to_string(),

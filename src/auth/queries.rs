@@ -61,9 +61,6 @@ pub async fn authenticate(state: &AppState, credentials: &Credentials) -> Result
 
 pub async fn authenticate_token(state: &AppState, token: &str) -> Result<Actor> {
     let actor = verify_auth_token(token, &state.config.jwt_secret)?;
-    if !actor.scope.contains("auth") {
-        return Err(Error::InsufficientAuthScope);
-    }
 
     // Validate client
     let db_pool = state.db_pool.clone();
