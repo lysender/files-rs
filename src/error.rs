@@ -13,6 +13,7 @@ pub enum Error {
     #[from]
     AnyError(String),
     BadRequest(String),
+    Forbidden(String),
     ValidationError(String),
     NotFound(String),
     InvalidAuthToken,
@@ -42,6 +43,7 @@ impl core::fmt::Display for Error {
         match self {
             Self::AnyError(val) => write!(f, "{}", val),
             Self::BadRequest(val) => write!(f, "{}", val),
+            Self::Forbidden(val) => write!(f, "{}", val),
             Self::ValidationError(val) => write!(f, "{}", val),
             Self::NotFound(val) => write!(f, "{}", val),
             Self::InvalidAuthToken => write!(f, "Invalid auth token"),

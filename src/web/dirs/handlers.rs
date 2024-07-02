@@ -5,11 +5,13 @@ use axum::{
 };
 
 use crate::{
+    auth::Actor,
     buckets::Bucket,
     dirs::{
         create_dir, delete_dir, get_dir, list_dirs, update_dir, Dir, ListDirsParams, NewDir,
         UpdateDir,
     },
+    roles::Permission,
     storage::list_objects,
     web::{params::Params, response::JsonResponse, server::AppState},
     Error, Result,
@@ -29,9 +31,15 @@ pub async fn list_dirs_handler(
 
 pub async fn create_dir_handler(
     State(state): State<AppState>,
+    Extension(actor): Extension<Actor>,
     Path(bucket_id): Path<String>,
     payload: Option<Json<NewDir>>,
 ) -> Result<JsonResponse> {
+    let permissions = vec![Permission::DirsCreate];
+    if !actor.has_permissions(&permissions) {
+        return Err(Error::Forbidden("Insufficient permissions".to_string()));
+    }
+
     let Some(data) = payload else {
         return Err(Error::BadRequest("Invalid request payload".to_string()));
     };
@@ -49,10 +57,16 @@ pub async fn get_dir_handler(Extension(dir): Extension<Dir>) -> Result<JsonRespo
 
 pub async fn update_dir_handler(
     State(state): State<AppState>,
+    Extension(actor): Extension<Actor>,
     Extension(dir): Extension<Dir>,
     Path(params): Path<Params>,
     payload: Option<Json<UpdateDir>>,
 ) -> Result<JsonResponse> {
+    let permissions = vec![Permission::DirsEdit];
+    if !actor.has_permissions(&permissions) {
+        return Err(Error::Forbidden("Insufficient permissions".to_string()));
+    }
+
     let dir_id = params.dir_id.clone().expect("dir_id is required");
     let Some(data) = payload else {
         return Err(Error::BadRequest("Invalid request payload".to_string()));
@@ -82,8 +96,14 @@ async fn get_dir_as_response(state: &AppState, id: &str) -> Result<JsonResponse>
 
 pub async fn delete_dir_handler(
     State(state): State<AppState>,
+    Extension(actor): Extension<Actor>,
     Path(params): Path<Params>,
 ) -> Result<JsonResponse> {
+    let permissions = vec![Permission::DirsDelete];
+    if !actor.has_permissions(&permissions) {
+        return Err(Error::Forbidden("Insufficient permissions".to_string()));
+    }
+
     let dir_id = params.dir_id.clone().expect("dir_id is required");
     let _ = delete_dir(&state.db_pool, &dir_id).await?;
     Ok(JsonResponse::with_status(
@@ -93,9 +113,15 @@ pub async fn delete_dir_handler(
 }
 
 pub async fn list_files_handler(
+    Extension(actor): Extension<Actor>,
     Extension(bucket): Extension<Bucket>,
     Extension(dir): Extension<Dir>,
 ) -> Result<JsonResponse> {
+    let permissions = vec![Permission::FilesList, Permission::FilesView];
+    if !actor.has_permissions(&permissions) {
+        return Err(Error::Forbidden("Insufficient permissions".to_string()));
+    }
+
     let files = list_objects(&bucket.name, &dir.name).await?;
     Ok(JsonResponse::new(serde_json::to_string(&files).unwrap()))
 }
