@@ -8,7 +8,7 @@ use axum::{
 };
 
 use crate::{
-    auth::ActorDto,
+    auth::Actor,
     dirs::get_dir,
     roles::{has_permissions, Permission},
     web::{params::Params, response::create_error_response, server::AppState},
@@ -16,7 +16,7 @@ use crate::{
 
 pub async fn dir_middleware(
     state: State<AppState>,
-    Extension(actor): Extension<ActorDto>,
+    Extension(actor): Extension<Actor>,
     Path(params): Path<Params>,
     mut request: Request,
     next: Next,

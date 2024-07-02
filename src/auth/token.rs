@@ -2,7 +2,7 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
-use super::models::Actor;
+use super::models::ActorPayload;
 use crate::{Error, Result};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -16,7 +16,7 @@ struct Claims {
 // Duration in seconds
 const EXP_DURATION: i64 = 60 * 60 * 24 * 7; // 1 week
 
-pub fn create_auth_token(actor: &Actor, secret: &str) -> Result<String> {
+pub fn create_auth_token(actor: &ActorPayload, secret: &str) -> Result<String> {
     let exp = Utc::now() + Duration::seconds(EXP_DURATION);
 
     let claims = Claims {
@@ -37,7 +37,7 @@ pub fn create_auth_token(actor: &Actor, secret: &str) -> Result<String> {
     Ok(token)
 }
 
-pub fn verify_auth_token(token: &str, secret: &str) -> Result<Actor> {
+pub fn verify_auth_token(token: &str, secret: &str) -> Result<ActorPayload> {
     let Ok(decoded) = decode::<Claims>(
         token,
         &DecodingKey::from_secret(secret.as_bytes()),
@@ -53,7 +53,7 @@ pub fn verify_auth_token(token: &str, secret: &str) -> Result<Actor> {
         return Err(Error::InvalidAuthToken);
     }
 
-    Ok(Actor {
+    Ok(ActorPayload {
         id: decoded.claims.sub,
         client_id: decoded.claims.cid,
         scope: decoded.claims.scope,
@@ -67,7 +67,7 @@ mod tests {
     #[test]
     fn test_jwt_token() {
         // Generate token
-        let actor = Actor {
+        let actor = ActorPayload {
             id: "thor01".to_string(),
             client_id: "client01".to_string(),
             scope: "auth files".to_string(),

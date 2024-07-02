@@ -8,7 +8,7 @@ use axum::{
 };
 
 use crate::{
-    auth::ActorDto,
+    auth::Actor,
     buckets::get_bucket,
     roles::{has_permissions, Permission},
     util::valid_id,
@@ -17,7 +17,7 @@ use crate::{
 
 pub async fn bucket_middleware(
     State(state): State<AppState>,
-    Extension(actor): Extension<ActorDto>,
+    Extension(actor): Extension<Actor>,
     Path(params): Path<Params>,
     mut request: Request,
     next: Next,

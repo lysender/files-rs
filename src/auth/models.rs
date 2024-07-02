@@ -4,14 +4,14 @@ use validator::Validate;
 use crate::users::UserDto;
 
 #[derive(Clone)]
-pub struct Actor {
+pub struct ActorPayload {
     pub id: String,
     pub client_id: String,
     pub scope: String,
 }
 
 #[derive(Clone)]
-pub struct ActorDto {
+pub struct Actor {
     pub id: String,
     pub client_id: String,
     pub scope: String,

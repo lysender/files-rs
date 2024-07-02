@@ -1,7 +1,7 @@
 use validator::Validate;
 
 use super::{
-    create_auth_token, verify_auth_token, verify_password, Actor, ActorDto, AuthResponse,
+    create_auth_token, verify_auth_token, verify_password, Actor, ActorPayload, AuthResponse,
     Credentials,
 };
 
@@ -47,7 +47,7 @@ pub async fn authenticate(state: &AppState, credentials: &Credentials) -> Result
     let _ = verify_password(&credentials.password, &user.password)?;
 
     // Generate a token
-    let actor = Actor {
+    let actor = ActorPayload {
         id: user.id.clone(),
         client_id: client.id.clone(),
         scope: "auth files".to_string(),
@@ -59,7 +59,7 @@ pub async fn authenticate(state: &AppState, credentials: &Credentials) -> Result
     })
 }
 
-pub async fn authenticate_token(state: &AppState, token: &str) -> Result<ActorDto> {
+pub async fn authenticate_token(state: &AppState, token: &str) -> Result<Actor> {
     let actor = verify_auth_token(token, &state.config.jwt_secret)?;
     if !actor.scope.contains("auth") {
         return Err(Error::InsufficientAuthScope);
@@ -82,7 +82,7 @@ pub async fn authenticate_token(state: &AppState, token: &str) -> Result<ActorDt
         return Err(Error::UserNotFound);
     }
 
-    Ok(ActorDto {
+    Ok(Actor {
         id: actor.id,
         client_id: actor.client_id,
         scope: actor.scope,

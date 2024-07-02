@@ -8,7 +8,7 @@ use axum::{
 };
 
 use crate::{
-    auth::{authenticate_token, ActorDto},
+    auth::{authenticate_token, Actor},
     web::{response::to_error_response, server::AppState},
     Error,
 };
@@ -25,7 +25,7 @@ pub async fn auth_middleware(
         .get(header::AUTHORIZATION)
         .and_then(|header| header.to_str().ok());
 
-    let mut actor: Option<ActorDto> = None;
+    let mut actor: Option<Actor> = None;
 
     if let Some(auth_header) = auth_header {
         // At this point, authentication must be verified
@@ -55,7 +55,7 @@ pub async fn auth_middleware(
 }
 
 pub async fn require_auth_middleware(
-    actor: Option<Extension<ActorDto>>,
+    actor: Option<Extension<Actor>>,
     request: Request,
     next: Next,
 ) -> Response<Body> {
