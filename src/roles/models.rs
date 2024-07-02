@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use serde::Serialize;
 
 #[derive(PartialEq, Debug, Clone, Serialize)]
@@ -7,7 +9,7 @@ pub enum Role {
     FilesViewer,
 }
 
-#[derive(PartialEq, Debug, Clone, Serialize)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone, Serialize)]
 pub enum Permission {
     BucketsList,
     BucketsView,
@@ -43,6 +45,16 @@ impl TryFrom<&str> for Role {
     }
 }
 
+impl core::fmt::Display for Role {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        match self {
+            Role::FilesAdmin => write!(f, "FilesAdmin"),
+            Role::FilesEditor => write!(f, "FilesEditor"),
+            Role::FilesViewer => write!(f, "FilesViewer"),
+        }
+    }
+}
+
 pub fn to_roles(list: Vec<String>) -> crate::Result<Vec<Role>> {
     let mut roles: Vec<Role> = Vec::new();
     for item in list.into_iter() {
@@ -74,6 +86,27 @@ impl TryFrom<&str> for Permission {
             "files.view" => Ok(Permission::FilesView),
             "files.manage" => Ok(Permission::FilesManage),
             _ => Err(format!("Invalid permission: {}", value)),
+        }
+    }
+}
+
+impl core::fmt::Display for Permission {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        match self {
+            Permission::BucketsList => write!(f, "buckets.list"),
+            Permission::BucketsView => write!(f, "buckets.view"),
+            Permission::DirsCreate => write!(f, "dirs.create"),
+            Permission::DirsEdit => write!(f, "dirs.edit"),
+            Permission::DirsDelete => write!(f, "dirs.delete"),
+            Permission::DirsList => write!(f, "dirs.list"),
+            Permission::DirsView => write!(f, "dirs.view"),
+            Permission::DirsManage => write!(f, "dirs.manage"),
+            Permission::FilesCreate => write!(f, "files.create"),
+            Permission::FilesEdit => write!(f, "files.edit"),
+            Permission::FilesDelete => write!(f, "files.delete"),
+            Permission::FilesList => write!(f, "files.list"),
+            Permission::FilesView => write!(f, "files.view"),
+            Permission::FilesManage => write!(f, "files.manage"),
         }
     }
 }
@@ -117,17 +150,23 @@ pub fn role_permissions(role: &Role) -> Vec<Permission> {
     }
 }
 
+/// Get all permissions for the given roles
+pub fn roles_permissions(roles: &Vec<Role>) -> HashSet<Permission> {
+    let mut permissions: HashSet<Permission> = HashSet::new();
+    roles.iter().for_each(|role| {
+        role_permissions(role).iter().for_each(|p| {
+            permissions.insert(p.clone());
+        });
+    });
+    permissions
+}
+
 /// Checks whether the given roles have the required permissions
 pub fn has_permissions(roles: &Vec<Role>, req_permissions: &Vec<Permission>) -> bool {
-    // Collect all permissions for all roles
-    let mut all_permissions: Vec<Permission> = Vec::new();
-    for role in roles {
-        all_permissions.extend(role_permissions(role));
-    }
-
+    let permissions = roles_permissions(roles);
     req_permissions
         .iter()
-        .all(|permission| all_permissions.contains(permission))
+        .all(|permission| permissions.contains(permission))
 }
 
 #[cfg(test)]

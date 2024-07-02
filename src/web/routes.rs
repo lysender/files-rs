@@ -7,7 +7,7 @@ use axum::{
 };
 
 use super::{
-    auth::authenticate_handler,
+    auth::{authenticate_handler, user_routes},
     buckets::buckets_routes,
     health::{health_live_handler, health_ready_handler},
     home::home_handler,
@@ -35,6 +35,7 @@ fn public_routes(state: AppState) -> Router<AppState> {
 fn private_routes(state: AppState) -> Router<AppState> {
     Router::new()
         .nest("/v1/buckets", buckets_routes(state.clone()))
+        .nest("/v1/user", user_routes(state.clone()))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,

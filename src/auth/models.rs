@@ -1,8 +1,10 @@
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 use crate::{
-    roles::{has_permissions, Permission, Role},
+    roles::{has_permissions, roles_permissions, Permission, Role},
     users::UserDto,
 };
 
@@ -40,6 +42,10 @@ impl Actor {
 
     pub fn has_permissions(&self, permissions: &Vec<Permission>) -> bool {
         has_permissions(&self.user.roles, &permissions)
+    }
+
+    pub fn get_permissions(&self) -> HashSet<Permission> {
+        roles_permissions(&self.user.roles)
     }
 }
 
