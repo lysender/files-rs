@@ -21,7 +21,7 @@ pub struct NewDir {
     #[validate(custom(function = "crate::validators::sluggable"))]
     pub name: String,
 
-    #[validate(length(min = 1, max = 100))]
+    #[validate(length(min = 1, max = 60))]
     pub label: String,
 }
 
