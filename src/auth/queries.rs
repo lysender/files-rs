@@ -79,10 +79,5 @@ pub async fn authenticate_token(state: &AppState, token: &str) -> Result<Actor> 
         return Err(Error::UserNotFound);
     }
 
-    Ok(Actor {
-        id: actor.id,
-        client_id: actor.client_id,
-        scope: actor.scope,
-        user: user.into(),
-    })
+    Ok(Actor::new(actor, user.into()))
 }

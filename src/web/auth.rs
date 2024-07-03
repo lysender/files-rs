@@ -37,11 +37,7 @@ pub async fn profile_handler(Extension(actor): Extension<Actor>) -> Result<JsonR
 }
 
 pub async fn user_permissions(Extension(actor): Extension<Actor>) -> Result<JsonResponse> {
-    let mut items: Vec<String> = actor
-        .get_permissions()
-        .iter()
-        .map(|p| p.to_string())
-        .collect();
+    let mut items: Vec<String> = actor.permissions.iter().map(|p| p.to_string()).collect();
     items.sort();
     Ok(JsonResponse::new(serde_json::to_string(&items).unwrap()))
 }

@@ -1,10 +1,8 @@
-use std::collections::HashSet;
-
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 use crate::{
-    roles::{has_permissions, roles_permissions, Permission, Role},
+    roles::{roles_permissions, Permission, Role},
     users::UserDto,
 };
 
@@ -21,9 +19,24 @@ pub struct Actor {
     pub client_id: String,
     pub scope: String,
     pub user: UserDto,
+    pub roles: Vec<Role>,
+    pub permissions: Vec<Permission>,
 }
 
 impl Actor {
+    pub fn new(payload: ActorPayload, user: UserDto) -> Self {
+        let roles = user.roles.clone();
+        let permissions = roles_permissions(&roles).into_iter().collect();
+        Actor {
+            id: user.id.clone(),
+            client_id: payload.client_id,
+            scope: payload.scope,
+            user,
+            roles,
+            permissions,
+        }
+    }
+
     pub fn has_auth_scope(&self) -> bool {
         self.has_scope("auth")
     }
@@ -37,15 +50,13 @@ impl Actor {
     }
 
     pub fn has_roles(&self, roles: &Vec<Role>) -> bool {
-        roles.iter().all(|role| self.user.roles.contains(role))
+        roles.iter().all(|role| self.roles.contains(role))
     }
 
     pub fn has_permissions(&self, permissions: &Vec<Permission>) -> bool {
-        has_permissions(&self.user.roles, &permissions)
-    }
-
-    pub fn get_permissions(&self) -> HashSet<Permission> {
-        roles_permissions(&self.user.roles)
+        permissions
+            .iter()
+            .all(|permission| self.permissions.contains(permission))
     }
 }
 

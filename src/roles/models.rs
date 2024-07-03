@@ -151,14 +151,14 @@ pub fn role_permissions(role: &Role) -> Vec<Permission> {
 }
 
 /// Get all permissions for the given roles
-pub fn roles_permissions(roles: &Vec<Role>) -> HashSet<Permission> {
+pub fn roles_permissions(roles: &Vec<Role>) -> Vec<Permission> {
     let mut permissions: HashSet<Permission> = HashSet::new();
     roles.iter().for_each(|role| {
         role_permissions(role).iter().for_each(|p| {
             permissions.insert(p.clone());
         });
     });
-    permissions
+    permissions.into_iter().collect()
 }
 
 /// Checks whether the given roles have the required permissions
