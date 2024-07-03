@@ -25,11 +25,11 @@ pub struct Actor {
 
 impl Actor {
     pub fn has_auth_scope(&self) -> bool {
-        self.scope.contains("auth")
+        self.has_scope("auth")
     }
 
     pub fn has_files_scope(&self) -> bool {
-        self.scope.contains("files")
+        self.has_scope("files")
     }
 
     pub fn has_scope(&self, scope: &str) -> bool {

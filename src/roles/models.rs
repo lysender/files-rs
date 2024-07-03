@@ -4,9 +4,9 @@ use serde::Serialize;
 
 #[derive(PartialEq, Debug, Clone, Serialize)]
 pub enum Role {
-    FilesAdmin,
-    FilesEditor,
-    FilesViewer,
+    Admin,
+    Editor,
+    Viewer,
 }
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Serialize)]
@@ -34,11 +34,11 @@ impl TryFrom<&str> for Role {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "FilesAdmin" => Ok(Role::FilesAdmin),
-            "FilesEditor" => Ok(Role::FilesEditor),
-            "FilesViewer" => Ok(Role::FilesViewer),
+            "Admin" => Ok(Role::Admin),
+            "Editor" => Ok(Role::Editor),
+            "Viewer" => Ok(Role::Viewer),
             _ => Err(format!(
-                "Valid roles are: FilesAdmin, FilesEditor, FilesViewer, got: {}",
+                "Valid roles are: Admin, Editor, Viewer, got: {}",
                 value
             )),
         }
@@ -48,9 +48,9 @@ impl TryFrom<&str> for Role {
 impl core::fmt::Display for Role {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
-            Role::FilesAdmin => write!(f, "FilesAdmin"),
-            Role::FilesEditor => write!(f, "FilesEditor"),
-            Role::FilesViewer => write!(f, "FilesViewer"),
+            Role::Admin => write!(f, "Admin"),
+            Role::Editor => write!(f, "Editor"),
+            Role::Viewer => write!(f, "Viewer"),
         }
     }
 }
@@ -114,7 +114,7 @@ impl core::fmt::Display for Permission {
 /// Role to permissions mapping
 pub fn role_permissions(role: &Role) -> Vec<Permission> {
     match role {
-        Role::FilesAdmin => vec![
+        Role::Admin => vec![
             Permission::BucketsList,
             Permission::BucketsView,
             Permission::DirsCreate,
@@ -130,7 +130,7 @@ pub fn role_permissions(role: &Role) -> Vec<Permission> {
             Permission::FilesView,
             Permission::FilesManage,
         ],
-        Role::FilesEditor => vec![
+        Role::Editor => vec![
             Permission::BucketsList,
             Permission::BucketsView,
             Permission::DirsList,
@@ -139,7 +139,7 @@ pub fn role_permissions(role: &Role) -> Vec<Permission> {
             Permission::FilesList,
             Permission::FilesView,
         ],
-        Role::FilesViewer => vec![
+        Role::Viewer => vec![
             Permission::BucketsList,
             Permission::BucketsView,
             Permission::DirsList,
@@ -175,7 +175,7 @@ mod tests {
 
     #[test]
     fn test_admin_permissions() {
-        let roles = vec![Role::FilesAdmin];
+        let roles = vec![Role::Admin];
         let permissions = vec![
             Permission::DirsCreate,
             Permission::DirsEdit,
@@ -195,7 +195,7 @@ mod tests {
 
     #[test]
     fn test_editor_permissions() {
-        let roles = vec![Role::FilesEditor];
+        let roles = vec![Role::Editor];
         let permissions = vec![
             Permission::DirsList,
             Permission::DirsView,
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_viewer_permissions() {
-        let roles = vec![Role::FilesViewer];
+        let roles = vec![Role::Viewer];
         let permissions = vec![
             Permission::DirsList,
             Permission::DirsView,
@@ -220,7 +220,7 @@ mod tests {
 
     #[test]
     fn test_multiple_roles() {
-        let roles = vec![Role::FilesAdmin, Role::FilesViewer];
+        let roles = vec![Role::Admin, Role::Viewer];
         let permissions = vec![
             Permission::DirsList,
             Permission::DirsView,
@@ -236,35 +236,35 @@ mod tests {
 
     #[test]
     fn test_no_create_dir_permission_editor() {
-        let roles = vec![Role::FilesEditor];
+        let roles = vec![Role::Editor];
         let permissions = vec![Permission::DirsCreate];
         assert!(!has_permissions(&roles, &permissions));
     }
 
     #[test]
     fn test_no_create_dir_permission_viewer() {
-        let roles = vec![Role::FilesViewer];
+        let roles = vec![Role::Viewer];
         let permissions = vec![Permission::DirsCreate];
         assert!(!has_permissions(&roles, &permissions));
     }
 
     #[test]
     fn test_has_create_dir_permission_admin() {
-        let roles = vec![Role::FilesAdmin];
+        let roles = vec![Role::Admin];
         let permissions = vec![Permission::DirsCreate];
         assert!(has_permissions(&roles, &permissions));
     }
 
     #[test]
     fn test_to_roles_valid() {
-        let data = vec!["FilesAdmin".to_string(), "FilesViewer".to_string()];
+        let data = vec!["Admin".to_string(), "Viewer".to_string()];
         let roles = to_roles(data).unwrap();
-        assert_eq!(roles, vec![Role::FilesAdmin, Role::FilesViewer]);
+        assert_eq!(roles, vec![Role::Admin, Role::Viewer]);
     }
 
     #[test]
     fn test_to_roles_invalid() {
-        let data = vec!["FilesAdmin".to_string(), "InvalidRole".to_string()];
+        let data = vec!["Admin".to_string(), "InvalidRole".to_string()];
         let roles = to_roles(data);
         assert!(roles.is_err());
     }

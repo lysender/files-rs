@@ -13,7 +13,9 @@ Simple file storage service written in Rust
 - [x] Tenanats/clients management via CLI
 - [x] Teams/users management via CLI
 - [x] Buckets management via CLI
-- [ ] Role based authorization
+- [x] Role based authorization
+- [x] Directories CRUD
+- [ ] Files upload/delete
 
 ## Workflow
 

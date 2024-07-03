@@ -7,7 +7,7 @@ use tracing::error;
 use validator::Validate;
 
 use crate::auth::hash_password;
-use crate::roles::{to_roles, Role};
+use crate::roles::to_roles;
 use crate::schema::users::{self, dsl};
 use crate::util::generate_id;
 use crate::validators::flatten_errors;
