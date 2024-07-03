@@ -23,6 +23,7 @@ pub fn user_routes(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/", get(profile_handler))
         .route("/permissions", get(user_permissions))
+        .route("/authz", get(user_authz))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             require_auth_middleware,
@@ -40,4 +41,8 @@ pub async fn user_permissions(Extension(actor): Extension<Actor>) -> Result<Json
     let mut items: Vec<String> = actor.permissions.iter().map(|p| p.to_string()).collect();
     items.sort();
     Ok(JsonResponse::new(serde_json::to_string(&items).unwrap()))
+}
+
+pub async fn user_authz(Extension(actor): Extension<Actor>) -> Result<JsonResponse> {
+    Ok(JsonResponse::new(serde_json::to_string(&actor).unwrap()))
 }

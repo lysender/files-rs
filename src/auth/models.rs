@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 use crate::{
-    roles::{roles_permissions, Permission, Role},
+    roles::{roles_permissions, to_permissions, Permission, Role},
     users::UserDto,
 };
 
@@ -13,7 +13,7 @@ pub struct ActorPayload {
     pub scope: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct Actor {
     pub id: String,
     pub client_id: String,
@@ -26,7 +26,14 @@ pub struct Actor {
 impl Actor {
     pub fn new(payload: ActorPayload, user: UserDto) -> Self {
         let roles = user.roles.clone();
-        let permissions = roles_permissions(&roles).into_iter().collect();
+        let permissions: Vec<Permission> = roles_permissions(&roles).into_iter().collect();
+        // Convert to string to allow sorting
+        let mut permissions: Vec<String> = permissions.iter().map(|p| p.to_string()).collect();
+        permissions.sort();
+        // Convert again to Permission enum
+        let permissions: Vec<Permission> =
+            to_permissions(&permissions).expect("Invalid permissions");
+
         Actor {
             id: user.id.clone(),
             client_id: payload.client_id,
