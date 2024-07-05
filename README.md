@@ -285,7 +285,8 @@ User=www-data
 Group=www-data
 
 
-Environment="DATABASE_URL=sqlite:///path/to/db.sqlite3
+Environment="DATABASE_URL=sqlite:///path/to/db.sqlite3"
+Environment="UPLOAD_DIR=/path/to/upload_dir"
 Environment="CLIENT_ID=value"
 Environment="ADMIN_HASH=value"
 Environment="JWT_SECRET=value"

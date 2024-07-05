@@ -1,11 +1,12 @@
 use clap::{Parser, Subcommand};
 use dotenvy::dotenv;
 use serde::Deserialize;
-use std::env;
+use std::{env, path::PathBuf};
 
 use crate::{util::valid_id, Result};
 
 pub const DATABASE_URL: &str = "DATABASE_URL";
+pub const UPLOAD_DIR: &str = "UPLOAD_DIR";
 pub const CLIENT_ID: &str = "CLIENT_ID";
 pub const JWT_SECRET: &str = "JWT_SECRET";
 pub const ADMIN_HASH: &str = "ADMIN_HASH";
@@ -19,6 +20,7 @@ pub struct Config {
     pub client_id: String,
     pub jwt_secret: String,
     pub cloud_credentials: String,
+    pub upload_dir: PathBuf,
     pub server: ServerConfig,
     pub db: DbConfig,
 }
@@ -42,6 +44,7 @@ impl Config {
         let jwt_secret = env::var(JWT_SECRET).expect("JWT_SECRET must be set");
         let cloud_credentials = env::var(GOOGLE_APPLICATION_CREDENTIALS)
             .expect("GOOGLE_APPLICATION_CREDENTIALS must be set");
+        let upload_dir = PathBuf::from(env::var(UPLOAD_DIR).expect("UPLOAD_DIR must be set"));
         let port_str = env::var(PORT).expect("PORT must be set");
 
         if database_url.len() == 0 {
@@ -57,6 +60,11 @@ impl Config {
             return Err("JWT_SECRET is required.".into());
         }
 
+        // Validate upload dir
+        if !upload_dir.exists() {
+            return Err("UPLOAD_DIR does not exist.".into());
+        }
+
         let Ok(port) = port_str.parse::<u16>() else {
             return Err("PORT must be a valid number.".into());
         };
@@ -69,6 +77,7 @@ impl Config {
             client_id,
             jwt_secret,
             cloud_credentials,
+            upload_dir,
             server: ServerConfig { port },
             db: DbConfig { url: database_url },
         })
