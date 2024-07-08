@@ -1,11 +1,10 @@
 use std::process;
 
-use axum::extract::{DefaultBodyLimit, FromRef};
+use axum::extract::FromRef;
 use axum::Router;
 use deadpool_diesel::sqlite::Pool;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
-use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{info, Level};
 
@@ -34,10 +33,7 @@ pub async fn run_web_server() -> Result<()> {
         db_pool: pool,
     };
 
-    let mut routes_all = Router::new()
-        .merge(all_routes(state))
-        .layer(DefaultBodyLimit::max(8000000))
-        .layer(RequestBodyLimitLayer::new(8000000));
+    let mut routes_all = Router::new().merge(all_routes(state));
 
     routes_all = routes_all.layer(
         ServiceBuilder::new().layer(
