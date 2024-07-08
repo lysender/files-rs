@@ -39,6 +39,9 @@ pub async fn create_file_handler(
     while let Some(mut field) = multipart.next_field().await.unwrap() {
         let name = field.name().unwrap();
         let original_filename = field.file_name().unwrap();
+
+        // Low chance of collision but higher than the full uuid v7 string
+        // Prefer a shorter filename for better readability
         let filename = slugify_prefixed(&original_filename);
         let content_type = field.content_type().unwrap();
 
