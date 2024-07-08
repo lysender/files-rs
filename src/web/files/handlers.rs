@@ -13,7 +13,7 @@ use crate::{
     dirs::Dir,
     roles::Permission,
     storage::list_objects,
-    util::generate_id,
+    util::{generate_id, slugify_prefixed},
     web::{response::JsonResponse, server::AppState},
     Error, Result,
 };
@@ -38,7 +38,8 @@ pub async fn create_file_handler(
 ) -> Result<JsonResponse> {
     while let Some(mut field) = multipart.next_field().await.unwrap() {
         let name = field.name().unwrap();
-        let filename = field.file_name().unwrap();
+        let original_filename = field.file_name().unwrap();
+        let filename = slugify_prefixed(&original_filename);
         let content_type = field.content_type().unwrap();
 
         // Ensure upload dir exists
@@ -49,12 +50,12 @@ pub async fn create_file_handler(
         }
 
         println!("name: {}", name);
+        println!("original filename: {}", original_filename);
         println!("filename: {}", filename);
         println!("content_type: {}", content_type);
 
         // Prepare to save to file
-        let id = generate_id();
-        let file_path = upload_dir.as_path().join(&id);
+        let file_path = upload_dir.as_path().join(&filename);
         let Ok(mut file) = File::create(&file_path).await else {
             return Err("Unable to create file".into());
         };
