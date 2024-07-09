@@ -111,17 +111,3 @@ pub async fn delete_dir_handler(
         "".to_string(),
     ))
 }
-
-pub async fn list_files_handler(
-    Extension(actor): Extension<Actor>,
-    Extension(bucket): Extension<Bucket>,
-    Extension(dir): Extension<Dir>,
-) -> Result<JsonResponse> {
-    let permissions = vec![Permission::FilesList, Permission::FilesView];
-    if !actor.has_permissions(&permissions) {
-        return Err(Error::Forbidden("Insufficient permissions".to_string()));
-    }
-
-    let files = list_objects(&bucket.name, &dir.name).await?;
-    Ok(JsonResponse::new(serde_json::to_string(&files).unwrap()))
-}

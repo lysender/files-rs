@@ -7,7 +7,7 @@ use google_cloud_storage::http::objects::list::ListObjectsRequest;
 use google_cloud_storage::http::Error as CloudError;
 use google_cloud_storage::sign::SignedURLOptions;
 
-use crate::files::{File, FileUrls};
+use crate::files::{FileDto, FileUrls};
 use crate::{Error, Result};
 
 pub async fn read_bucket(name: &str) -> Result<String> {
@@ -38,7 +38,7 @@ pub async fn read_bucket(name: &str) -> Result<String> {
     }
 }
 
-pub async fn list_objects(bucket_name: &str, dir: &str) -> Result<Vec<File>> {
+pub async fn list_objects(bucket_name: &str, dir: &str) -> Result<Vec<FileDto>> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
     };
@@ -67,7 +67,7 @@ pub async fn list_objects(bucket_name: &str, dir: &str) -> Result<Vec<File>> {
                 .map(|obj| {
                     let mut name = obj.name.clone();
                     name = name.replace(&full_prefix, "");
-                    File {
+                    FileDto {
                         name,
                         urls: FileUrls::new(),
                     }
@@ -89,7 +89,11 @@ pub async fn list_objects(bucket_name: &str, dir: &str) -> Result<Vec<File>> {
     }
 }
 
-pub async fn format_files(bucket_name: &str, dir: &str, files: &Vec<File>) -> Result<Vec<File>> {
+pub async fn format_files(
+    bucket_name: &str,
+    dir: &str,
+    files: &Vec<FileDto>,
+) -> Result<Vec<FileDto>> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
     };
@@ -107,7 +111,7 @@ pub async fn format_files(bucket_name: &str, dir: &str, files: &Vec<File>) -> Re
         }));
     }
 
-    let mut updated_files: Vec<File> = Vec::with_capacity(files.len());
+    let mut updated_files: Vec<FileDto> = Vec::with_capacity(files.len());
     for task in tasks {
         let Ok(res) = task.await else {
             return Err("Unable to extract data from spanwed task.".into());
@@ -119,7 +123,12 @@ pub async fn format_files(bucket_name: &str, dir: &str, files: &Vec<File>) -> Re
     Ok(updated_files)
 }
 
-async fn format_file(client: &Client, bucket_name: &str, dir: &str, file: &File) -> Result<File> {
+async fn format_file(
+    client: &Client,
+    bucket_name: &str,
+    dir: &str,
+    file: &FileDto,
+) -> Result<FileDto> {
     let expires = Duration::from_secs(3600 * 12);
     let mut options = SignedURLOptions::default();
     options.expires = expires;
@@ -145,7 +154,7 @@ async fn format_file(client: &Client, bucket_name: &str, dir: &str, file: &File)
         return Err("Unable to sign object URL.".into());
     };
 
-    Ok(File {
+    Ok(FileDto {
         name: file.name.clone(),
         urls: FileUrls {
             o: orig_url,

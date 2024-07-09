@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Json, Multipart, Path, Query, State},
+    extract::{Multipart, State},
     Extension,
 };
 use tokio::{
@@ -13,7 +13,7 @@ use crate::{
     dirs::Dir,
     roles::Permission,
     storage::list_objects,
-    util::{generate_id, slugify_prefixed},
+    util::slugify_prefixed,
     web::{response::JsonResponse, server::AppState},
     Error, Result,
 };
