@@ -70,6 +70,11 @@ pub fn to_error_response(error: Error) -> Response<Body> {
         Error::MissingUploadFile(message) => {
             create_error_response(StatusCode::BAD_REQUEST, message, "Bad Request".to_string())
         }
+        Error::FileTypeNotAllowed => create_error_response(
+            StatusCode::BAD_REQUEST,
+            "File type not allowed".to_string(),
+            "Bad Request".to_string(),
+        ),
         Error::NotFound(message) => {
             create_error_response(StatusCode::NOT_FOUND, message, "Not Found".to_string())
         }

@@ -11,6 +11,7 @@ use crate::{
     auth::Actor,
     buckets::Bucket,
     dirs::Dir,
+    files::{FilePayload, ALLOWED_IMAGE_TYPES},
     roles::Permission,
     storage::list_objects,
     util::slugify_prefixed,
@@ -36,14 +37,28 @@ pub async fn create_file_handler(
     State(state): State<AppState>,
     mut multipart: Multipart,
 ) -> Result<JsonResponse> {
+    let mut payload: Option<FilePayload> = None;
+
     while let Some(mut field) = multipart.next_field().await.unwrap() {
-        let name = field.name().unwrap();
-        let original_filename = field.file_name().unwrap();
+        let name = field.name().unwrap().to_string();
+        if name != "file" {
+            continue;
+        }
+
+        let original_filename = field.file_name().unwrap().to_string();
 
         // Low chance of collision but higher than the full uuid v7 string
         // Prefer a shorter filename for better readability
         let filename = slugify_prefixed(&original_filename);
-        let content_type = field.content_type().unwrap();
+        let content_type = field.content_type().unwrap().to_string();
+        let is_image = content_type.starts_with("image/");
+
+        if is_image {
+            // Initial validation from mime-type whitelist
+            if !ALLOWED_IMAGE_TYPES.contains(&content_type.as_str()) {
+                return Err(Error::FileTypeNotAllowed);
+            }
+        }
 
         // Ensure upload dir exists
         let upload_dir = state.config.upload_dir.clone();
@@ -52,11 +67,6 @@ pub async fn create_file_handler(
             return Err("Unable to create upload dir".into());
         }
 
-        println!("name: {}", name);
-        println!("original filename: {}", original_filename);
-        println!("filename: {}", filename);
-        println!("content_type: {}", content_type);
-
         // Prepare to save to file
         let file_path = upload_dir.as_path().join(&filename);
         let Ok(mut file) = File::create(&file_path).await else {
@@ -64,11 +74,27 @@ pub async fn create_file_handler(
         };
 
         // Stream contents to file
+        let mut size: usize = 0;
         while let Some(chunk) = field.chunk().await.unwrap() {
+            size += chunk.len();
             file.write_all(&chunk).await.unwrap();
         }
 
-        println!("uploaded file: {:?}", file_path);
+        payload = Some({
+            FilePayload {
+                name: original_filename,
+                filename,
+                content_type,
+                size: size as i64,
+                is_image,
+            }
+        })
     }
+
+    let Some(payload) = payload else {
+        return Err(Error::MissingUploadFile("Missing upload file".to_string()));
+    };
+
+    println!("payload: {:?}", payload);
     Ok(JsonResponse::new("uploaded file...".to_string()))
 }

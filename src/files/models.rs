@@ -1,6 +1,8 @@
 use diesel::prelude::*;
 use serde::Serialize;
 
+pub const ALLOWED_IMAGE_TYPES: [&str; 4] = ["image/jpeg", "image/pjpeg", "image/png", "image/gif"];
+
 #[derive(Debug, Clone, Queryable, Selectable, Insertable, Serialize)]
 #[diesel(table_name = crate::schema::files)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
@@ -31,6 +33,15 @@ pub struct FileDtox {
     pub img_versions: Option<Vec<ImgVersionDto>>,
     pub created_at: i64,
     pub updated_at: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct FilePayload {
+    pub name: String,
+    pub filename: String,
+    pub content_type: String,
+    pub size: i64,
+    pub is_image: bool,
 }
 
 impl From<File> for FileDtox {
