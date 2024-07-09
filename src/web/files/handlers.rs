@@ -1,5 +1,6 @@
 use axum::{
     extract::{Multipart, State},
+    http::StatusCode,
     Extension,
 };
 use tokio::{
@@ -11,7 +12,7 @@ use crate::{
     auth::Actor,
     buckets::Bucket,
     dirs::Dir,
-    files::{FilePayload, ALLOWED_IMAGE_TYPES},
+    files::{create_file, FilePayload, ALLOWED_IMAGE_TYPES},
     roles::Permission,
     storage::list_objects,
     util::slugify_prefixed,
@@ -35,6 +36,7 @@ pub async fn list_files_handler(
 
 pub async fn create_file_handler(
     State(state): State<AppState>,
+    Extension(dir): Extension<Dir>,
     mut multipart: Multipart,
 ) -> Result<JsonResponse> {
     let mut payload: Option<FilePayload> = None;
@@ -97,5 +99,14 @@ pub async fn create_file_handler(
     };
 
     println!("payload: {:?}", payload);
-    Ok(JsonResponse::new("uploaded file...".to_string()))
+
+    let db_pool = state.db_pool.clone();
+    let res = create_file(&db_pool, &dir.id, &payload).await;
+    match res {
+        Ok(file) => Ok(JsonResponse::with_status(
+            StatusCode::CREATED,
+            serde_json::to_string(&file).unwrap(),
+        )),
+        Err(e) => Err(e),
+    }
 }
