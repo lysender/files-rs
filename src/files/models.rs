@@ -8,6 +8,7 @@ pub struct File {
     pub filename: String,
     pub content_type: String,
     pub size: i64,
+    pub is_image: i32,
     pub img_dimension: Option<String>,
     pub img_versions: Option<String>,
     pub created_at: i64,

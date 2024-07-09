@@ -208,12 +208,14 @@ Dir:
 
 File:
 - id
-- content_type
+- dir_id 
 - name
+- filename
+- content_type
 - size
 - is_image
-- versions
-- object_url
+- img_dimention 
+- img_versions
 - created_at
 - updated_at
 

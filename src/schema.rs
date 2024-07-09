@@ -31,6 +31,22 @@ diesel::table! {
 }
 
 diesel::table! {
+    files (id) {
+        id -> Text,
+        dir_id -> Text,
+        name -> Text,
+        filename -> Text,
+        content_type -> Text,
+        size -> BigInt,
+        is_image -> Integer,
+        img_dimension -> Nullable<Text>,
+        img_versions -> Nullable<Text>,
+        created_at -> BigInt,
+        updated_at -> BigInt,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Text,
         client_id -> Text,
@@ -51,5 +67,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     buckets,
     clients,
     dirs,
+    files,
     users,
 );
