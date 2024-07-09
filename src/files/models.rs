@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use diesel::prelude::*;
 use serde::Serialize;
 
@@ -39,6 +41,7 @@ pub struct FileDtox {
 pub struct FilePayload {
     pub name: String,
     pub filename: String,
+    pub path: PathBuf,
     pub content_type: String,
     pub size: i64,
     pub is_image: bool,

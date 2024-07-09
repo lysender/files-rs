@@ -61,7 +61,7 @@ pub async fn create_file_handler(
         }
 
         // Ensure upload dir exists
-        let upload_dir = state.config.upload_dir.clone();
+        let upload_dir = state.config.upload_dir.clone().join("orig");
         let dir_res = create_dir_all(upload_dir.clone()).await;
         if let Err(_) = dir_res {
             return Err("Unable to create upload dir".into());
@@ -83,7 +83,8 @@ pub async fn create_file_handler(
         payload = Some({
             FilePayload {
                 name: original_filename,
-                filename,
+                filename: filename.clone(),
+                path: upload_dir.clone().join(&filename),
                 content_type,
                 size: size as i64,
                 is_image,
