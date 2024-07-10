@@ -12,7 +12,7 @@ use crate::{
     auth::Actor,
     buckets::Bucket,
     dirs::Dir,
-    files::{create_file, FilePayload, ImgVersion, ALLOWED_IMAGE_TYPES},
+    files::{create_file, FilePayload, ImgVersion},
     roles::Permission,
     storage::list_objects,
     util::slugify_prefixed,

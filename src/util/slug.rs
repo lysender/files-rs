@@ -4,31 +4,29 @@ use uuid::Uuid;
 const MAX_SLUG_LEN: usize = 30;
 
 pub fn slugify(s: &str) -> String {
-    let slug: String = s
-        .trim()
-        .chars()
-        .filter_map(|c| match c {
-            'A'..='Z' => Some(c.to_ascii_lowercase()),
-            'a'..='z' | '0'..='9' | '.' | '-' | '_' => Some(c),
-            ' ' => Some('-'),
-            _ => None,
-        })
-        .collect();
-
     // Ensure there are no consecutive hyphens
     let mut items: Vec<char> = Vec::new();
     let mut prev_hyphen = false;
 
-    for ch in slug.chars() {
-        if ch == '-' {
-            if prev_hyphen {
-                continue;
+    for ch in s.chars() {
+        let curr_ch: Option<char> = match ch {
+            'A'..='Z' => Some(ch.to_ascii_lowercase()),
+            'a'..='z' | '0'..='9' | '.' | '-' | '_' => Some(ch),
+            ' ' => Some('-'),
+            _ => None,
+        };
+
+        if let Some(curr_ch) = curr_ch {
+            if curr_ch == '-' {
+                if prev_hyphen {
+                    continue;
+                }
+                prev_hyphen = true;
+            } else {
+                prev_hyphen = false;
             }
-            prev_hyphen = true;
-        } else {
-            prev_hyphen = false;
+            items.push(curr_ch);
         }
-        items.push(ch);
     }
 
     let slug: String = items.iter().collect();

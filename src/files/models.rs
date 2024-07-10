@@ -5,6 +5,9 @@ use serde::Serialize;
 
 pub const ALLOWED_IMAGE_TYPES: [&str; 4] = ["image/jpeg", "image/pjpeg", "image/png", "image/gif"];
 
+/// Maximum image dimension before creating a preview version
+pub const MAX_DIMENSION: u32 = 2000;
+
 #[derive(Debug, Clone, Queryable, Selectable, Insertable, Serialize)]
 #[diesel(table_name = crate::schema::files)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
@@ -99,6 +102,9 @@ impl TryFrom<ImgVersion> for ImgDimension {
             ImgVersion::Original => {
                 Err("Original image version does not have fixed dimension".to_string())
             }
+            ImgVersion::Preview => {
+                Err("Preview image version does not have fixed dimension".to_string())
+            }
             ImgVersion::Thumbnail => Ok(Self {
                 width: 150,
                 height: 125,
@@ -112,6 +118,9 @@ pub enum ImgVersion {
     #[serde(rename = "orig")]
     Original,
 
+    #[serde(rename = "prev")]
+    Preview,
+
     #[serde(rename = "thumb")]
     Thumbnail,
 }
@@ -120,26 +129,22 @@ pub enum ImgVersion {
 pub struct ImgVersionDto {
     pub version: ImgVersion,
     pub dimension: ImgDimension,
-    pub filename: String,
     pub url: Option<String>,
 }
 
 impl ImgVersionDto {
-    pub fn to_path(&self, prefix: &PathBuf) -> PathBuf {
-        prefix
-            .clone()
-            .join(self.version.to_string())
-            .join(&self.filename)
+    pub fn to_path(&self, prefix: &PathBuf, filename: &str) -> PathBuf {
+        prefix.clone().join(self.version.to_string()).join(filename)
     }
 }
 
 impl FromStr for ImgVersionDto {
     type Err = String;
 
-    /// Parse string like "orig:200x400:filename.jpg" into ImgVersionDto without the url part
+    /// Parse string like "orig:200x400" into ImgVersionDto without the url part
     fn from_str(s: &str) -> core::result::Result<Self, Self::Err> {
         let parts: Vec<&str> = s.split(':').collect();
-        if parts.len() != 3 {
+        if parts.len() != 2 {
             return Err("Invalid image version dto".to_string());
         }
 
@@ -159,7 +164,6 @@ impl FromStr for ImgVersionDto {
                 width: dimension[0],
                 height: dimension[1],
             },
-            filename: parts[2].to_string(),
             url: None,
         })
     }
@@ -169,6 +173,7 @@ impl core::fmt::Display for ImgVersion {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             Self::Original => write!(f, "{}", "orig"),
+            Self::Preview => write!(f, "{}", "prev"),
             Self::Thumbnail => write!(f, "{}", "thumb"),
         }
     }
@@ -180,6 +185,7 @@ impl TryFrom<&str> for ImgVersion {
     fn try_from(value: &str) -> core::result::Result<Self, Self::Error> {
         match value {
             "orig" => Ok(Self::Original),
+            "prev" => Ok(Self::Preview),
             "thumb" => Ok(Self::Thumbnail),
             _ => Err(format!("Invalid image version: {}", value)),
         }

@@ -14,12 +14,15 @@ use validator::Validate;
 
 use crate::dirs::{Dir, NewDir, UpdateDir};
 use crate::schema::dirs::{self, dsl};
-use crate::util::generate_id;
+use crate::util::{generate_id, replace_extension};
 use crate::validators::flatten_errors;
 use crate::web::pagination::Paginated;
 use crate::{Error, Result};
 
-use super::{FileDtox, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ALLOWED_IMAGE_TYPES};
+use super::{
+    FileDtox, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ALLOWED_IMAGE_TYPES,
+    MAX_DIMENSION,
+};
 
 const MAX_FILES: i32 = 1000;
 const MAX_PER_PAGE: i32 = 50;
@@ -57,15 +60,8 @@ pub async fn create_file(db_pool: &Pool, dir_id: &str, data: &FilePayload) -> Re
 }
 
 fn init_file(dir_id: &str, data: &FilePayload) -> Result<FileDtox> {
-    let Ok(kind) = infer::get_from_path(&data.path) else {
-        return Err("Unable to read uploaded file".into());
-    };
-    let Some(kind) = kind else {
-        return Err("Uploaded file type unknown".into());
-    };
-
     let mut is_image = false;
-    let content_type = kind.mime_type().to_string();
+    let content_type = get_content_type(&data.path)?;
     if content_type.starts_with("image/") {
         if !ALLOWED_IMAGE_TYPES.contains(&content_type.as_str()) {
             return Err("Uploaded image type not allowed".into());
@@ -119,11 +115,7 @@ fn read_image(path: &PathBuf) -> Result<DynamicImage> {
 }
 
 fn create_versions(data: &FilePayload) -> Result<Vec<ImgVersionDto>> {
-    let orientation = match parse_exif_orientation(&data.path) {
-        Ok(v) => v,
-        Err(_) => 1,
-    };
-
+    let orientation = parse_exif_orientation(&data.path).unwrap_or(1);
     let img = read_image(&data.path)?;
 
     // Rotate based on exif orientation before creating versions
@@ -143,14 +135,55 @@ fn create_versions(data: &FilePayload) -> Result<Vec<ImgVersionDto>> {
             width: source_width,
             height: source_height,
         },
-        filename: data.filename.clone(),
         url: None,
     };
 
+    let mut versions: Vec<ImgVersionDto> = vec![orig_version];
+
+    // // Only create preview if original image has side longer than max
+    if source_width > MAX_DIMENSION || source_height > MAX_DIMENSION {
+        let preview = create_preview(data, &rotated_img)?;
+        versions.push(preview);
+    }
+
     // Create thumbnail
     let thumb = create_thumbnail(data, rotated_img)?;
+    versions.push(thumb);
 
-    Ok(vec![orig_version, thumb])
+    Ok(versions)
+}
+
+fn create_preview(data: &FilePayload, img: &DynamicImage) -> Result<ImgVersionDto> {
+    // Prepare dir
+    let prev_dir = data
+        .upload_dir
+        .clone()
+        .join(ImgVersion::Preview.to_string());
+
+    if let Err(err) = std::fs::create_dir_all(&prev_dir) {
+        return Err(format!("Unable to create preview dir: {}", err).into());
+    }
+
+    let resized_img = img.resize(MAX_DIMENSION, MAX_DIMENSION, imageops::FilterType::Lanczos3);
+
+    // Save the resized image
+    let version = ImgVersionDto {
+        version: ImgVersion::Preview,
+        dimension: ImgDimension {
+            width: resized_img.width(),
+            height: resized_img.height(),
+        },
+        url: None,
+    };
+
+    let dest_file = version.to_path(&data.upload_dir, &data.filename);
+
+    // All non-original versions will be saved as JPEG
+    if let Err(err) = resized_img.save(dest_file) {
+        return Err(format!("Unable to save preview: {}", err).into());
+    }
+
+    Ok(version)
 }
 
 fn create_thumbnail(data: &FilePayload, mut img: DynamicImage) -> Result<ImgVersionDto> {
@@ -163,7 +196,6 @@ fn create_thumbnail(data: &FilePayload, mut img: DynamicImage) -> Result<ImgVers
     if let Err(err) = std::fs::create_dir_all(&thumb_dir) {
         return Err(format!("Unable to create thumbnail dir: {}", err).into());
     }
-    println!("thumb_dir: {:?}", thumb_dir);
 
     let Ok(dim) = ImgDimension::try_from(ImgVersion::Thumbnail) else {
         return Err("Unable to identify thumbnail dimension settings".into());
@@ -198,21 +230,28 @@ fn create_thumbnail(data: &FilePayload, mut img: DynamicImage) -> Result<ImgVers
     let version = ImgVersionDto {
         version: ImgVersion::Thumbnail,
         dimension: ImgDimension {
-            width: cropped.width(),
-            height: cropped.height(),
+            width: dim.width,
+            height: dim.height,
         },
-        filename: data.filename.clone(),
         url: None,
     };
 
-    let dest_file = version.to_path(&data.upload_dir);
+    let dest_file = version.to_path(&data.upload_dir, &data.filename);
 
     // All non-original versions will be saved as JPEG
-    if let Err(err) = resized_img.save_with_format(dest_file, image::ImageFormat::Jpeg) {
+    if let Err(err) = resized_img.save(dest_file) {
         return Err(format!("Unable to save thumbnail: {}", err).into());
     }
 
     Ok(version)
+}
+
+fn get_content_type(path: &PathBuf) -> Result<String> {
+    match infer::get_from_path(path) {
+        Ok(Some(kind)) => Ok(kind.mime_type().to_string()),
+        Ok(None) => Err("Uploaded file type unknown".into()),
+        Err(_) => Err("Unable to read uploaded file".into()),
+    }
 }
 
 fn parse_exif_orientation(path: &PathBuf) -> Result<u32> {
