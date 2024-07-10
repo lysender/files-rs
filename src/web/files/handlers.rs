@@ -63,7 +63,7 @@ pub async fn create_file_handler(
         }
 
         // Ensure upload dir exists
-        let upload_dir = state.config.upload_dir.clone().join("orig");
+        let upload_dir = state.config.upload_dir.clone().join("tmp").join("orig");
         let dir_res = create_dir_all(upload_dir.clone()).await;
         if let Err(_) = dir_res {
             return Err("Unable to create upload dir".into());

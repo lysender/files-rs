@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
 use diesel::prelude::*;
 use serde::Serialize;
@@ -16,7 +16,6 @@ pub struct File {
     pub content_type: String,
     pub size: i64,
     pub is_image: i32,
-    pub img_dimension: Option<String>,
     pub img_versions: Option<String>,
     pub created_at: i64,
     pub updated_at: i64,
@@ -30,9 +29,15 @@ pub struct FileDtox {
     pub filename: String,
     pub content_type: String,
     pub size: i64,
+
+    // Only available on non-image files
+    pub url: Option<String>,
+
     pub is_image: bool,
-    pub img_dimension: Option<ImgDimension>,
+
+    // Only available for image files, main url is in orig version
     pub img_versions: Option<Vec<ImgVersionDto>>,
+
     pub created_at: i64,
     pub updated_at: i64,
 }
@@ -49,43 +54,15 @@ pub struct FilePayload {
 
 impl From<File> for FileDtox {
     fn from(file: File) -> Self {
-        let img_dimension = match file.img_dimension {
-            Some(dim) => {
-                // Parse dimension string like 200x400 into width: 200, height: 400
-                let values: Vec<i32> = dim
-                    .split('x')
-                    .filter_map(|s| s.parse::<i32>().ok())
-                    .collect();
-
-                if values.len() == 2 {
-                    Some(ImgDimension {
-                        width: values[0],
-                        height: values[1],
-                    })
-                } else {
-                    None
-                }
-            }
-            None => None,
-        };
         let img_versions = match file.img_versions {
-            Some(versions) => {
-                // Parse versions string like: orig,thumb into its equivalent struct
-                let versions: Vec<ImgVersion> = versions
+            Some(versions_str) => {
+                let versions: Vec<ImgVersionDto> = versions_str
                     .split(',')
-                    .filter_map(|s| s.try_into().ok())
+                    .filter_map(|s| s.parse::<ImgVersionDto>().ok())
                     .collect();
 
                 if versions.len() > 0 {
-                    Some(
-                        versions
-                            .into_iter()
-                            .map(|v| ImgVersionDto {
-                                version: v,
-                                url: None,
-                            })
-                            .collect::<Vec<ImgVersionDto>>(),
-                    )
+                    Some(versions)
                 } else {
                     None
                 }
@@ -101,8 +78,8 @@ impl From<File> for FileDtox {
             content_type: file.content_type,
             size: file.size,
             is_image: file.is_image == 1,
-            img_dimension,
             img_versions,
+            url: None,
             created_at: file.created_at,
             updated_at: file.updated_at,
         }
@@ -111,20 +88,55 @@ impl From<File> for FileDtox {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ImgDimension {
-    pub width: i32,
-    pub height: i32,
+    pub width: u32,
+    pub height: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum ImgVersion {
+    #[serde(rename = "orig")]
     Original,
+
+    #[serde(rename = "thumb")]
     Thumbnail,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ImgVersionDto {
     pub version: ImgVersion,
+    pub dimension: ImgDimension,
     pub url: Option<String>,
+}
+
+impl FromStr for ImgVersionDto {
+    type Err = String;
+
+    /// Parse string like "orig:200x400" into ImgVersionDto without the url part
+    fn from_str(s: &str) -> core::result::Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split(':').collect();
+        if parts.len() != 2 {
+            return Err("Invalid image version dto".to_string());
+        }
+
+        let version = ImgVersion::try_from(parts[0])?;
+        let dimension = parts[1]
+            .split('x')
+            .filter_map(|s| s.parse::<u32>().ok())
+            .collect::<Vec<u32>>();
+
+        if dimension.len() != 2 {
+            return Err("Invalid image dimension".to_string());
+        }
+
+        Ok(Self {
+            version,
+            dimension: ImgDimension {
+                width: dimension[0],
+                height: dimension[1],
+            },
+            url: None,
+        })
+    }
 }
 
 impl core::fmt::Display for ImgVersion {
