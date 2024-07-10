@@ -44,7 +44,7 @@ impl Config {
         let jwt_secret = env::var(JWT_SECRET).expect("JWT_SECRET must be set");
         let cloud_credentials = env::var(GOOGLE_APPLICATION_CREDENTIALS)
             .expect("GOOGLE_APPLICATION_CREDENTIALS must be set");
-        let upload_dir = PathBuf::from(env::var(UPLOAD_DIR).expect("UPLOAD_DIR must be set"));
+        let mut upload_dir = PathBuf::from(env::var(UPLOAD_DIR).expect("UPLOAD_DIR must be set"));
         let port_str = env::var(PORT).expect("PORT must be set");
 
         if database_url.len() == 0 {
@@ -60,10 +60,13 @@ impl Config {
             return Err("JWT_SECRET is required.".into());
         }
 
-        // Validate upload dir
+        // Validate upload dir, it should exist first, then we will create tmp dir inside
         if !upload_dir.exists() {
             return Err("UPLOAD_DIR does not exist.".into());
         }
+        upload_dir = upload_dir.join("tmp");
+
+        std::fs::create_dir_all(&upload_dir).expect("Unable to create upload tmp dir");
 
         let Ok(port) = port_str.parse::<u16>() else {
             return Err("PORT must be a valid number.".into());

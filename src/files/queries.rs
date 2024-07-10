@@ -43,34 +43,10 @@ pub async fn create_file(db_pool: &Pool, dir_id: &str, data: &FilePayload) -> Re
     let mut file = init_file(dir_id, data)?;
 
     if file.is_image {
-        let orientation = match parse_exif_orientation(&data.path) {
-            Ok(v) => v,
-            Err(_) => 1,
-        };
-
-        let img = read_image(&data.path)?;
-
-        // Rotate based on exif orientation before creating versions
-        let rotated_img = match orientation {
-            8 => img.rotate90(),
-            3 => img.rotate180(),
-            6 => img.rotate90(),
-            _ => img,
-        };
-
-        let source_width = rotated_img.width();
-        let source_height = rotated_img.height();
-
-        let orig_version = ImgVersionDto {
-            version: ImgVersion::Original,
-            dimension: ImgDimension {
-                width: source_width,
-                height: source_height,
-            },
-            url: None,
-        };
-
-        file.img_versions = Some(vec![orig_version]);
+        let versions = create_versions(data)?;
+        if versions.len() > 0 {
+            file.img_versions = Some(versions);
+        }
 
         // Create image versions
         // Save to storage
@@ -140,6 +116,103 @@ fn read_image(path: &PathBuf) -> Result<DynamicImage> {
             Err(msg.as_str().into())
         }
     }
+}
+
+fn create_versions(data: &FilePayload) -> Result<Vec<ImgVersionDto>> {
+    let orientation = match parse_exif_orientation(&data.path) {
+        Ok(v) => v,
+        Err(_) => 1,
+    };
+
+    let img = read_image(&data.path)?;
+
+    // Rotate based on exif orientation before creating versions
+    let rotated_img = match orientation {
+        8 => img.rotate90(),
+        3 => img.rotate180(),
+        6 => img.rotate90(),
+        _ => img,
+    };
+
+    let source_width = rotated_img.width();
+    let source_height = rotated_img.height();
+
+    let orig_version = ImgVersionDto {
+        version: ImgVersion::Original,
+        dimension: ImgDimension {
+            width: source_width,
+            height: source_height,
+        },
+        filename: data.filename.clone(),
+        url: None,
+    };
+
+    // Create thumbnail
+    let thumb = create_thumbnail(data, rotated_img)?;
+
+    Ok(vec![orig_version, thumb])
+}
+
+fn create_thumbnail(data: &FilePayload, mut img: DynamicImage) -> Result<ImgVersionDto> {
+    // Prepare dir
+    let thumb_dir = data
+        .upload_dir
+        .clone()
+        .join(ImgVersion::Thumbnail.to_string());
+
+    if let Err(err) = std::fs::create_dir_all(&thumb_dir) {
+        return Err(format!("Unable to create thumbnail dir: {}", err).into());
+    }
+    println!("thumb_dir: {:?}", thumb_dir);
+
+    let Ok(dim) = ImgDimension::try_from(ImgVersion::Thumbnail) else {
+        return Err("Unable to identify thumbnail dimension settings".into());
+    };
+
+    let source_width = img.width();
+    let source_height = img.height();
+
+    // This one is brought to you by chad jipitty
+    let aspect_ratio = dim.width as f32 / dim.height as f32;
+    let current_aspect_ratio = source_width as f32 / source_height as f32;
+
+    let (crop_width, crop_height, x_offset, y_offset) = if current_aspect_ratio > aspect_ratio {
+        // Crop horizontally (landscape mode)
+        let crop_width = (source_height as f32 * aspect_ratio) as u32;
+        let x_offset = (source_width - crop_width) / 2;
+        (crop_width, source_height, x_offset, 0)
+    } else {
+        // Crop vertically (portrait mode)
+        let crop_height = (source_width as f32 / aspect_ratio) as u32;
+        let y_offset = (source_height - crop_height) / 2;
+        (source_width, crop_height, 0, y_offset)
+    };
+
+    // Crop the image using scaled dimensions, cutting off some parts
+    let cropped = img.crop(x_offset, y_offset, crop_width, crop_height);
+
+    // Resize the cropped image to the desired dimensions
+    let resized_img = cropped.resize_exact(dim.width, dim.height, imageops::FilterType::Lanczos3);
+
+    // Save the resized image
+    let version = ImgVersionDto {
+        version: ImgVersion::Thumbnail,
+        dimension: ImgDimension {
+            width: cropped.width(),
+            height: cropped.height(),
+        },
+        filename: data.filename.clone(),
+        url: None,
+    };
+
+    let dest_file = version.to_path(&data.upload_dir);
+
+    // All non-original versions will be saved as JPEG
+    if let Err(err) = resized_img.save_with_format(dest_file, image::ImageFormat::Jpeg) {
+        return Err(format!("Unable to save thumbnail: {}", err).into());
+    }
+
+    Ok(version)
 }
 
 fn parse_exif_orientation(path: &PathBuf) -> Result<u32> {

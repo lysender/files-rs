@@ -12,7 +12,7 @@ use crate::{
     auth::Actor,
     buckets::Bucket,
     dirs::Dir,
-    files::{create_file, FilePayload, ALLOWED_IMAGE_TYPES},
+    files::{create_file, FilePayload, ImgVersion, ALLOWED_IMAGE_TYPES},
     roles::Permission,
     storage::list_objects,
     util::slugify_prefixed,
@@ -54,14 +54,18 @@ pub async fn create_file_handler(
         let filename = slugify_prefixed(&original_filename);
 
         // Ensure upload dir exists
-        let upload_dir = state.config.upload_dir.clone().join("tmp").join("orig");
-        let dir_res = create_dir_all(upload_dir.clone()).await;
+        let orig_dir = state
+            .config
+            .upload_dir
+            .clone()
+            .join(ImgVersion::Original.to_string());
+        let dir_res = create_dir_all(orig_dir.clone()).await;
         if let Err(_) = dir_res {
             return Err("Unable to create upload dir".into());
         }
 
         // Prepare to save to file
-        let file_path = upload_dir.as_path().join(&filename);
+        let file_path = orig_dir.as_path().join(&filename);
         let Ok(mut file) = File::create(&file_path).await else {
             return Err("Unable to create file".into());
         };
@@ -75,9 +79,10 @@ pub async fn create_file_handler(
 
         payload = Some({
             FilePayload {
+                upload_dir: state.config.upload_dir.clone(),
                 name: original_filename,
                 filename: filename.clone(),
-                path: upload_dir.clone().join(&filename),
+                path: orig_dir.clone().join(&filename),
                 size: size as i64,
             }
         })

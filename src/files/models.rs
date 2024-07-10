@@ -44,6 +44,7 @@ pub struct FileDtox {
 
 #[derive(Debug, Clone)]
 pub struct FilePayload {
+    pub upload_dir: PathBuf,
     pub name: String,
     pub filename: String,
     pub path: PathBuf,
@@ -90,6 +91,22 @@ pub struct ImgDimension {
     pub height: u32,
 }
 
+impl TryFrom<ImgVersion> for ImgDimension {
+    type Error = String;
+
+    fn try_from(value: ImgVersion) -> core::result::Result<Self, Self::Error> {
+        match value {
+            ImgVersion::Original => {
+                Err("Original image version does not have fixed dimension".to_string())
+            }
+            ImgVersion::Thumbnail => Ok(Self {
+                width: 150,
+                height: 125,
+            }),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum ImgVersion {
     #[serde(rename = "orig")]
@@ -103,16 +120,26 @@ pub enum ImgVersion {
 pub struct ImgVersionDto {
     pub version: ImgVersion,
     pub dimension: ImgDimension,
+    pub filename: String,
     pub url: Option<String>,
+}
+
+impl ImgVersionDto {
+    pub fn to_path(&self, prefix: &PathBuf) -> PathBuf {
+        prefix
+            .clone()
+            .join(self.version.to_string())
+            .join(&self.filename)
+    }
 }
 
 impl FromStr for ImgVersionDto {
     type Err = String;
 
-    /// Parse string like "orig:200x400" into ImgVersionDto without the url part
+    /// Parse string like "orig:200x400:filename.jpg" into ImgVersionDto without the url part
     fn from_str(s: &str) -> core::result::Result<Self, Self::Err> {
         let parts: Vec<&str> = s.split(':').collect();
-        if parts.len() != 2 {
+        if parts.len() != 3 {
             return Err("Invalid image version dto".to_string());
         }
 
@@ -132,6 +159,7 @@ impl FromStr for ImgVersionDto {
                 width: dimension[0],
                 height: dimension[1],
             },
+            filename: parts[2].to_string(),
             url: None,
         })
     }
