@@ -52,15 +52,6 @@ pub async fn create_file_handler(
         // Low chance of collision but higher than the full uuid v7 string
         // Prefer a shorter filename for better readability
         let filename = slugify_prefixed(&original_filename);
-        let content_type = field.content_type().unwrap().to_string();
-        let is_image = content_type.starts_with("image/");
-
-        if is_image {
-            // Initial validation from mime-type whitelist
-            if !ALLOWED_IMAGE_TYPES.contains(&content_type.as_str()) {
-                return Err(Error::FileTypeNotAllowed);
-            }
-        }
 
         // Ensure upload dir exists
         let upload_dir = state.config.upload_dir.clone().join("tmp").join("orig");
@@ -87,9 +78,7 @@ pub async fn create_file_handler(
                 name: original_filename,
                 filename: filename.clone(),
                 path: upload_dir.clone().join(&filename),
-                content_type,
                 size: size as i64,
-                is_image,
             }
         })
     }

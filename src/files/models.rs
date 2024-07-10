@@ -47,9 +47,7 @@ pub struct FilePayload {
     pub name: String,
     pub filename: String,
     pub path: PathBuf,
-    pub content_type: String,
     pub size: i64,
-    pub is_image: bool,
 }
 
 impl From<File> for FileDtox {

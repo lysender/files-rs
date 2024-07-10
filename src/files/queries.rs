@@ -1,6 +1,7 @@
 use deadpool_diesel::sqlite::Pool;
 use exif::{In, Tag};
 use image::imageops;
+use image::io::Reader as ImageReader;
 use std::fs::File as FsFile;
 use std::path::PathBuf;
 
@@ -18,7 +19,7 @@ use crate::validators::flatten_errors;
 use crate::web::pagination::Paginated;
 use crate::{Error, Result};
 
-use super::{FileDtox, FilePayload, ImgDimension, ImgVersion, ImgVersionDto};
+use super::{FileDtox, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ALLOWED_IMAGE_TYPES};
 
 const MAX_FILES: i32 = 1000;
 const MAX_PER_PAGE: i32 = 50;
@@ -41,7 +42,7 @@ pub async fn create_file(db_pool: &Pool, dir_id: &str, data: &FilePayload) -> Re
 
     let mut file = init_file(dir_id, data)?;
 
-    if data.is_image {
+    if file.is_image {
         let orientation = match parse_exif_orientation(&data.path) {
             Ok(v) => v,
             Err(_) => 1,
@@ -49,7 +50,7 @@ pub async fn create_file(db_pool: &Pool, dir_id: &str, data: &FilePayload) -> Re
 
         let img = read_image(&data.path)?;
 
-        // Rotate based on exit orientation before cropping
+        // Rotate based on exif orientation before creating versions
         let rotated_img = match orientation {
             8 => img.rotate90(),
             3 => img.rotate180(),
@@ -87,12 +88,18 @@ fn init_file(dir_id: &str, data: &FilePayload) -> Result<FileDtox> {
         return Err("Uploaded file type unknown".into());
     };
 
+    let mut is_image = false;
     let content_type = kind.mime_type().to_string();
-    if content_type != data.content_type {
-        return Err("Uploaded file type mismatch".into());
+    if content_type.starts_with("image/") {
+        if !ALLOWED_IMAGE_TYPES.contains(&content_type.as_str()) {
+            return Err("Uploaded image type not allowed".into());
+        }
+        is_image = true;
     }
 
+    // May be a few second delayed due to image processing
     let today = chrono::Utc::now().timestamp();
+
     let file = FileDtox {
         id: generate_id(),
         dir_id: dir_id.to_string(),
@@ -101,7 +108,7 @@ fn init_file(dir_id: &str, data: &FilePayload) -> Result<FileDtox> {
         content_type,
         size: data.size,
         url: None,
-        is_image: data.is_image,
+        is_image,
         img_versions: None,
         created_at: today,
         updated_at: today,
@@ -111,8 +118,22 @@ fn init_file(dir_id: &str, data: &FilePayload) -> Result<FileDtox> {
 }
 
 fn read_image(path: &PathBuf) -> Result<DynamicImage> {
-    match image::open(path) {
-        Ok(img) => Ok(img),
+    match ImageReader::open(path) {
+        Ok(read_img) => match read_img.with_guessed_format() {
+            Ok(format_img) => match format_img.decode() {
+                Ok(img) => Ok(img),
+                Err(e) => {
+                    let msg = format!("Unable to decode image: {}", e.to_string());
+                    error!("{}", msg);
+                    Err(msg.as_str().into())
+                }
+            },
+            Err(e) => {
+                let msg = format!("Unable to guess image format: {}", e.to_string());
+                error!("{}", msg);
+                Err(msg.as_str().into())
+            }
+        },
         Err(e) => {
             let msg = format!("Unable to read image: {}", e.to_string());
             error!("{}", msg);
