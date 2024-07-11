@@ -56,6 +56,38 @@ pub struct FilePayload {
     pub size: i64,
 }
 
+/// Convert FileDtox to File
+impl From<FileDtox> for File {
+    fn from(file: FileDtox) -> Self {
+        let img_versions = match file.img_versions {
+            Some(versions) => {
+                let versions_str: String = versions
+                    .iter()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<String>>()
+                    .join(",");
+
+                Some(versions_str)
+            }
+            None => None,
+        };
+
+        Self {
+            id: file.id,
+            dir_id: file.dir_id,
+            name: file.name,
+            filename: file.filename,
+            content_type: file.content_type,
+            size: file.size,
+            is_image: if file.is_image { 1 } else { 0 },
+            img_versions,
+            created_at: file.created_at,
+            updated_at: file.updated_at,
+        }
+    }
+}
+
+/// Convert File to FileDtox
 impl From<File> for FileDtox {
     fn from(file: File) -> Self {
         let img_versions = match file.img_versions {
@@ -96,6 +128,7 @@ pub struct ImgDimension {
     pub height: u32,
 }
 
+/// Try to convert ImgVersion to ImgDimension
 impl TryFrom<ImgVersion> for ImgDimension {
     type Error = String;
 
@@ -140,6 +173,18 @@ impl ImgVersionDto {
     }
 }
 
+/// Convert ImgVersionDto to String
+impl core::fmt::Display for ImgVersionDto {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(
+            f,
+            "{}:{}x{}",
+            self.version, self.dimension.width, self.dimension.height
+        )
+    }
+}
+
+/// Convert a string into ImgVersionDto
 impl FromStr for ImgVersionDto {
     type Err = String;
 
@@ -171,6 +216,7 @@ impl FromStr for ImgVersionDto {
     }
 }
 
+/// Convert ImgVersion to String
 impl core::fmt::Display for ImgVersion {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
@@ -181,6 +227,7 @@ impl core::fmt::Display for ImgVersion {
     }
 }
 
+/// Convert from &str to ImgVersion
 impl TryFrom<&str> for ImgVersion {
     type Error = String;
 

@@ -13,8 +13,8 @@ use tracing::error;
 use validator::Validate;
 
 use crate::buckets::Bucket;
-use crate::dirs::{Dir, NewDir, UpdateDir};
-use crate::schema::dirs::{self, dsl};
+use crate::dirs::Dir;
+use crate::schema::files::{self, dsl};
 use crate::storage::upload_object;
 use crate::util::{generate_id, replace_extension};
 use crate::validators::flatten_errors;
@@ -22,7 +22,7 @@ use crate::web::pagination::Paginated;
 use crate::{Error, Result};
 
 use super::{
-    FileDtox, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ALLOWED_IMAGE_TYPES,
+    File, FileDtox, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ALLOWED_IMAGE_TYPES,
     MAX_DIMENSION, MAX_PREVIEW_DIMENSION,
 };
 
@@ -39,17 +39,6 @@ pub async fn create_file(
     dir: &Dir,
     data: &FilePayload,
 ) -> Result<FileDtox> {
-    let Ok(db) = db_pool.get().await else {
-        return Err("Error getting db connection".into());
-    };
-
-    // Validate actual file
-    // Create versions if an image
-    // Upload to storage
-    // Save to database
-    // Cleanup created files
-    // Profit?
-
     let mut file = init_file(dir, data)?;
 
     if file.is_image {
@@ -57,13 +46,41 @@ pub async fn create_file(
         if versions.len() > 0 {
             file.img_versions = Some(versions);
         }
-
-        // Create image versions
-        // Save to storage
-        // Update file with versions
     }
 
-    upload_object(bucket, dir, &data.upload_dir, file).await
+    let uploaded_file = upload_object(bucket, dir, &data.upload_dir, file).await?;
+
+    // Save to database
+    let Ok(db) = db_pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+    let uploaded_copy = uploaded_file.clone();
+    let file_node: File = uploaded_copy.into();
+
+    let conn_result = db
+        .interact(move |conn| {
+            diesel::insert_into(files::table)
+                .values(&file_node)
+                .execute(conn)
+        })
+        .await;
+
+    match conn_result {
+        Ok(insert_res) => match insert_res {
+            Ok(_) => {
+                // Cleanup files before returning...
+                Ok(uploaded_file)
+            }
+            Err(e) => {
+                error!("{}", e);
+                Err("Error creating file".into())
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            Err("Error using the db connection".into())
+        }
+    }
 }
 
 fn init_file(dir: &Dir, data: &FilePayload) -> Result<FileDtox> {
