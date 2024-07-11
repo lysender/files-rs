@@ -21,7 +21,7 @@ use crate::{Error, Result};
 
 use super::{
     FileDtox, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ALLOWED_IMAGE_TYPES,
-    MAX_DIMENSION,
+    MAX_DIMENSION, MAX_PREVIEW_DIMENSION,
 };
 
 const MAX_FILES: i32 = 1000;
@@ -164,7 +164,18 @@ fn create_preview(data: &FilePayload, img: &DynamicImage) -> Result<ImgVersionDt
         return Err(format!("Unable to create preview dir: {}", err).into());
     }
 
-    let resized_img = img.resize(MAX_DIMENSION, MAX_DIMENSION, imageops::FilterType::Lanczos3);
+    // Either resize to max dimension or original dimension
+    // whichever is smaller
+    let mut max_width = MAX_PREVIEW_DIMENSION;
+    if img.width() < MAX_PREVIEW_DIMENSION {
+        max_width = img.width();
+    }
+    let mut max_height = MAX_PREVIEW_DIMENSION;
+    if img.height() < MAX_PREVIEW_DIMENSION {
+        max_height = img.height();
+    }
+
+    let resized_img = img.resize(max_width, max_height, imageops::FilterType::Lanczos3);
 
     // Save the resized image
     let version = ImgVersionDto {
@@ -178,7 +189,6 @@ fn create_preview(data: &FilePayload, img: &DynamicImage) -> Result<ImgVersionDt
 
     let dest_file = version.to_path(&data.upload_dir, &data.filename);
 
-    // All non-original versions will be saved as JPEG
     if let Err(err) = resized_img.save(dest_file) {
         return Err(format!("Unable to save preview: {}", err).into());
     }
