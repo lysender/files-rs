@@ -4,14 +4,13 @@ use std::time::Duration;
 use google_cloud_storage::client::{Client, ClientConfig};
 use google_cloud_storage::http::buckets::get::GetBucketRequest;
 use google_cloud_storage::http::buckets::list::ListBucketsRequest;
-use google_cloud_storage::http::objects::list::ListObjectsRequest;
 use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
 use google_cloud_storage::http::Error as CloudError;
 use google_cloud_storage::sign::SignedURLOptions;
 
 use crate::buckets::Bucket;
 use crate::dirs::Dir;
-use crate::files::{FileDto, FileDtox, FileUrls, ImgVersionDto, ORIGINAL_PATH};
+use crate::files::{FileDtox, ImgVersionDto, ORIGINAL_PATH};
 use crate::{Error, Result};
 
 pub async fn read_bucket(name: &str) -> Result<String> {
@@ -188,62 +187,11 @@ async fn upload_image_version(
     }
 }
 
-pub async fn list_objects(bucket_name: &str, dir: &str) -> Result<Vec<FileDto>> {
-    let Ok(config) = ClientConfig::default().with_auth().await else {
-        return Err("Failed to initialize storage client configuration.".into());
-    };
-    let client = Client::new(config);
-
-    // List objects from the original image sizes
-    let prefix = format!("o/{}/", dir);
-    let res = client
-        .list_objects(&ListObjectsRequest {
-            bucket: bucket_name.to_string(),
-            prefix: Some(prefix.clone()),
-            max_results: Some(1000),
-            ..Default::default()
-        })
-        .await;
-
-    match res {
-        Ok(items) => {
-            let Some(objects) = items.items else {
-                return Ok(vec![]);
-            };
-            let full_prefix = format!("{}", prefix);
-
-            let files = objects
-                .iter()
-                .map(|obj| {
-                    let mut name = obj.name.clone();
-                    name = name.replace(&full_prefix, "");
-                    FileDto {
-                        name,
-                        urls: FileUrls::new(),
-                    }
-                })
-                .collect();
-
-            format_files(bucket_name, dir, &files).await
-        }
-        Err(e) => match e {
-            CloudError::Response(gerr) => {
-                if gerr.code >= 400 && gerr.code < 500 {
-                    Err(Error::ValidationError(gerr.message))
-                } else {
-                    Err(format!("Google error: {}", gerr.message).as_str().into())
-                }
-            }
-            _ => Err("Failed to list bucket objects from cloud storage.".into()),
-        },
-    }
-}
-
 pub async fn format_files(
     bucket_name: &str,
     dir: &str,
-    files: &Vec<FileDto>,
-) -> Result<Vec<FileDto>> {
+    files: Vec<FileDtox>,
+) -> Result<Vec<FileDtox>> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
     };
@@ -257,11 +205,11 @@ pub async fn format_files(
         let dir_name = dir.to_string();
 
         tasks.push(tokio::spawn(async move {
-            format_file(&client_copy, &bname, &dir_name, &file_copy).await
+            format_file(&client_copy, &bname, &dir_name, file_copy).await
         }));
     }
 
-    let mut updated_files: Vec<FileDto> = Vec::with_capacity(files.len());
+    let mut updated_files: Vec<FileDtox> = Vec::with_capacity(files.len());
     for task in tasks {
         let Ok(res) = task.await else {
             return Err("Unable to extract data from spanwed task.".into());
@@ -277,40 +225,37 @@ async fn format_file(
     client: &Client,
     bucket_name: &str,
     dir: &str,
-    file: &FileDto,
-) -> Result<FileDto> {
-    let expires = Duration::from_secs(3600 * 12);
-    let mut options = SignedURLOptions::default();
-    options.expires = expires;
+    mut file: FileDtox,
+) -> Result<FileDtox> {
+    if file.is_image {
+        if let Some(versions) = &file.img_versions {
+            let mut updated_versions: Vec<ImgVersionDto> = Vec::with_capacity(versions.len());
+            for version in versions.iter() {
+                let url = generate_url(
+                    client,
+                    bucket_name,
+                    &format!("{}/{}/{}", dir, version.version.to_string(), file.filename),
+                )
+                .await?;
+                let mut version_copy = version.clone();
+                version_copy.url = Some(url);
+                updated_versions.push(version_copy);
+            }
+            if updated_versions.len() > 0 {
+                file.img_versions = Some(updated_versions);
+            }
+        }
+    } else {
+        let url = generate_url(
+            client,
+            bucket_name,
+            &format!("{}/{}/{}", dir, ORIGINAL_PATH, file.filename),
+        )
+        .await?;
+        file.url = Some(url);
+    }
 
-    let orig_path = format!("o/{}/{}", dir, file.name);
-    let thumb_path = format!("s/{}/{}", dir, file.name);
-
-    let Ok(orig_url) = client
-        .signed_url(bucket_name, &orig_path, None, None, options)
-        .await
-    else {
-        return Err("Unable to sign object URL.".into());
-    };
-
-    // For some reason, we cannot clone options
-    let mut options = SignedURLOptions::default();
-    options.expires = expires;
-
-    let Ok(thumb_url) = client
-        .signed_url(bucket_name, &thumb_path, None, None, options)
-        .await
-    else {
-        return Err("Unable to sign object URL.".into());
-    };
-
-    Ok(FileDto {
-        name: file.name.clone(),
-        urls: FileUrls {
-            o: orig_url,
-            s: thumb_url,
-        },
-    })
+    Ok(file)
 }
 
 async fn generate_url(client: &Client, bucket_name: &str, file_path: &str) -> Result<String> {

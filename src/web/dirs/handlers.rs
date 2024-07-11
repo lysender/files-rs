@@ -12,7 +12,6 @@ use crate::{
         UpdateDir,
     },
     roles::Permission,
-    storage::list_objects,
     web::{params::Params, response::JsonResponse, server::AppState},
     Error, Result,
 };

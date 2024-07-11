@@ -1,7 +1,8 @@
 use std::{path::PathBuf, str::FromStr};
 
 use diesel::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 pub const ORIGINAL_PATH: &str = "orig";
 pub const ALLOWED_IMAGE_TYPES: [&str; 4] = ["image/jpeg", "image/pjpeg", "image/png", "image/gif"];
@@ -54,6 +55,18 @@ pub struct FilePayload {
     pub filename: String,
     pub path: PathBuf,
     pub size: i64,
+}
+
+#[derive(Debug, Clone, Deserialize, Validate)]
+pub struct ListFilesParams {
+    #[validate(range(min = 1, max = 1000))]
+    pub page: Option<i32>,
+
+    #[validate(range(min = 1, max = 50))]
+    pub per_page: Option<i32>,
+
+    #[validate(length(min = 0, max = 50))]
+    pub keyword: Option<String>,
 }
 
 /// Convert FileDtox to File

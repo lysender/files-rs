@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Multipart, State},
+    extract::{Multipart, Query, State},
     http::StatusCode,
     Extension,
 };
@@ -12,25 +12,29 @@ use crate::{
     auth::Actor,
     buckets::Bucket,
     dirs::Dir,
-    files::{create_file, FilePayload, ImgVersion},
+    files::{create_file, list_files, FilePayload, ImgVersion, ListFilesParams},
     roles::Permission,
-    storage::list_objects,
     util::slugify_prefixed,
     web::{response::JsonResponse, server::AppState},
     Error, Result,
 };
 
 pub async fn list_files_handler(
+    State(state): State<AppState>,
     Extension(actor): Extension<Actor>,
     Extension(bucket): Extension<Bucket>,
     Extension(dir): Extension<Dir>,
+    query: Option<Query<ListFilesParams>>,
 ) -> Result<JsonResponse> {
     let permissions = vec![Permission::FilesList, Permission::FilesView];
     if !actor.has_permissions(&permissions) {
         return Err(Error::Forbidden("Insufficient permissions".to_string()));
     }
 
-    let files = list_objects(&bucket.name, &dir.name).await?;
+    let Some(params) = query else {
+        return Err(Error::BadRequest("Invalid query parameters".to_string()));
+    };
+    let files = list_files(&state.db_pool, &bucket.name, &dir, &params).await?;
     Ok(JsonResponse::new(serde_json::to_string(&files).unwrap()))
 }
 
