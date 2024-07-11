@@ -36,6 +36,7 @@ pub async fn list_files_handler(
 
 pub async fn create_file_handler(
     State(state): State<AppState>,
+    Extension(bucket): Extension<Bucket>,
     Extension(dir): Extension<Dir>,
     mut multipart: Multipart,
 ) -> Result<JsonResponse> {
@@ -92,10 +93,8 @@ pub async fn create_file_handler(
         return Err(Error::MissingUploadFile("Missing upload file".to_string()));
     };
 
-    println!("payload: {:?}", payload);
-
     let db_pool = state.db_pool.clone();
-    let res = create_file(&db_pool, &dir.id, &payload).await;
+    let res = create_file(&db_pool, &bucket, &dir, &payload).await;
     match res {
         Ok(file) => Ok(JsonResponse::with_status(
             StatusCode::CREATED,

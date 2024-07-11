@@ -1,13 +1,17 @@
+use std::path::PathBuf;
 use std::time::Duration;
 
 use google_cloud_storage::client::{Client, ClientConfig};
 use google_cloud_storage::http::buckets::get::GetBucketRequest;
 use google_cloud_storage::http::buckets::list::ListBucketsRequest;
 use google_cloud_storage::http::objects::list::ListObjectsRequest;
+use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
 use google_cloud_storage::http::Error as CloudError;
 use google_cloud_storage::sign::SignedURLOptions;
 
-use crate::files::{FileDto, FileUrls};
+use crate::buckets::Bucket;
+use crate::dirs::Dir;
+use crate::files::{FileDto, FileDtox, FileUrls, ORIGINAL_PATH};
 use crate::{Error, Result};
 
 pub async fn read_bucket(name: &str) -> Result<String> {
@@ -36,6 +40,81 @@ pub async fn read_bucket(name: &str) -> Result<String> {
             _ => Err("Failed to read bucket from cloud storage.".into()),
         },
     }
+}
+
+pub async fn upload_object(
+    bucket: &Bucket,
+    dir: &Dir,
+    source_dir: &PathBuf,
+    file: &FileDtox,
+) -> Result<FileDtox> {
+    match file.is_image {
+        true => upload_image_object(bucket, dir, source_dir, file).await,
+        false => upload_regular_object(bucket, dir, source_dir, file).await,
+    }
+}
+
+async fn upload_regular_object(
+    bucket: &Bucket,
+    dir: &Dir,
+    source_dir: &PathBuf,
+    file: &FileDtox,
+) -> Result<FileDtox> {
+    let Ok(config) = ClientConfig::default().with_auth().await else {
+        return Err("Failed to initialize storage client configuration.".into());
+    };
+    let client = Client::new(config);
+
+    // Prepare media
+    let file_path = format!("{}/{}/{}", &dir.name, ORIGINAL_PATH, &file.filename);
+    let mut media = Media::new(file_path.clone());
+    media.content_type = file.content_type.clone().into();
+    let upload_type = UploadType::Simple(media);
+
+    // Read file, preferred a stream but skill issues...
+    let source_path = source_dir.join(ORIGINAL_PATH).join(&file.filename);
+    let Ok(data) = std::fs::read(&source_path) else {
+        return Err("Failed to read file for upload.".into());
+    };
+
+    let upload_res = client
+        .upload_object(
+            &UploadObjectRequest {
+                bucket: bucket.name.clone(),
+                ..Default::default()
+            },
+            data,
+            &upload_type,
+        )
+        .await;
+
+    match upload_res {
+        Ok(_) => {
+            let mut file_copy = file.clone();
+            let url = generate_url(&client, &bucket.name, &file_path).await?;
+            file_copy.url = Some(url);
+            Ok(file_copy)
+        }
+        Err(e) => match e {
+            CloudError::Response(gerr) => {
+                if gerr.code >= 400 && gerr.code < 500 {
+                    Err(Error::ValidationError(gerr.message))
+                } else {
+                    Err(format!("Google error: {}", gerr.message).as_str().into())
+                }
+            }
+            _ => Err("Failed to upload object to cloud storage.".into()),
+        },
+    }
+}
+
+async fn upload_image_object(
+    bucket: &Bucket,
+    dir: &Dir,
+    source_dir: &PathBuf,
+    file: &FileDtox,
+) -> Result<FileDtox> {
+    todo!()
 }
 
 pub async fn list_objects(bucket_name: &str, dir: &str) -> Result<Vec<FileDto>> {
@@ -161,6 +240,21 @@ async fn format_file(
             s: thumb_url,
         },
     })
+}
+
+async fn generate_url(client: &Client, bucket_name: &str, file_path: &str) -> Result<String> {
+    let expires = Duration::from_secs(3600 * 12);
+    let mut options = SignedURLOptions::default();
+    options.expires = expires;
+
+    let res = client
+        .signed_url(bucket_name, file_path, None, None, options)
+        .await;
+
+    match res {
+        Ok(url) => Ok(url),
+        Err(_) => Err("Failed to sign object URL.".into()),
+    }
 }
 
 pub async fn test_list_buckets(project_id: &str) -> Result<()> {

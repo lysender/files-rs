@@ -3,6 +3,7 @@ use std::{path::PathBuf, str::FromStr};
 use diesel::prelude::*;
 use serde::Serialize;
 
+pub const ORIGINAL_PATH: &str = "orig";
 pub const ALLOWED_IMAGE_TYPES: [&str; 4] = ["image/jpeg", "image/pjpeg", "image/png", "image/gif"];
 
 /// Maximum image dimension before creating a preview version

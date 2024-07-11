@@ -12,8 +12,10 @@ use image::DynamicImage;
 use tracing::error;
 use validator::Validate;
 
+use crate::buckets::Bucket;
 use crate::dirs::{Dir, NewDir, UpdateDir};
 use crate::schema::dirs::{self, dsl};
+use crate::storage::upload_object;
 use crate::util::{generate_id, replace_extension};
 use crate::validators::flatten_errors;
 use crate::web::pagination::Paginated;
@@ -31,7 +33,12 @@ pub async fn list_files() -> Result<Vec<FileDtox>> {
     Ok(vec![])
 }
 
-pub async fn create_file(db_pool: &Pool, dir_id: &str, data: &FilePayload) -> Result<FileDtox> {
+pub async fn create_file(
+    db_pool: &Pool,
+    bucket: &Bucket,
+    dir: &Dir,
+    data: &FilePayload,
+) -> Result<FileDtox> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
@@ -43,7 +50,7 @@ pub async fn create_file(db_pool: &Pool, dir_id: &str, data: &FilePayload) -> Re
     // Cleanup created files
     // Profit?
 
-    let mut file = init_file(dir_id, data)?;
+    let mut file = init_file(dir, data)?;
 
     if file.is_image {
         let versions = create_versions(data)?;
@@ -56,10 +63,10 @@ pub async fn create_file(db_pool: &Pool, dir_id: &str, data: &FilePayload) -> Re
         // Update file with versions
     }
 
-    Ok(file)
+    upload_object(bucket, dir, &data.upload_dir, &file).await
 }
 
-fn init_file(dir_id: &str, data: &FilePayload) -> Result<FileDtox> {
+fn init_file(dir: &Dir, data: &FilePayload) -> Result<FileDtox> {
     let mut is_image = false;
     let content_type = get_content_type(&data.path)?;
     if content_type.starts_with("image/") {
@@ -74,7 +81,7 @@ fn init_file(dir_id: &str, data: &FilePayload) -> Result<FileDtox> {
 
     let file = FileDtox {
         id: generate_id(),
-        dir_id: dir_id.to_string(),
+        dir_id: dir.id.clone(),
         name: data.name.clone(),
         filename: data.filename.clone(),
         content_type,
