@@ -53,6 +53,11 @@ pub async fn list_dirs(
         }
     }
 
+    // Do not query if we already know there are no records
+    if total_pages == 0 {
+        return Ok(Paginated::new(Vec::new(), page, per_page, total_records));
+    }
+
     let params_copy = params.clone();
     let conn_result = db
         .interact(move |conn| {

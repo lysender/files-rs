@@ -6,7 +6,6 @@ use axum::{
 
 use crate::{
     auth::Actor,
-    buckets::Bucket,
     dirs::{
         create_dir, delete_dir, get_dir, list_dirs, update_dir, Dir, ListDirsParams, NewDir,
         UpdateDir,

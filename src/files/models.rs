@@ -28,7 +28,7 @@ pub struct File {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct FileDtox {
+pub struct FileDto {
     pub id: String,
     pub dir_id: String,
     pub name: String,
@@ -69,9 +69,9 @@ pub struct ListFilesParams {
     pub keyword: Option<String>,
 }
 
-/// Convert FileDtox to File
-impl From<FileDtox> for File {
-    fn from(file: FileDtox) -> Self {
+/// Convert FileDto to File
+impl From<FileDto> for File {
+    fn from(file: FileDto) -> Self {
         let img_versions = match file.img_versions {
             Some(versions) => {
                 let versions_str: String = versions
@@ -101,7 +101,7 @@ impl From<FileDtox> for File {
 }
 
 /// Convert File to FileDtox
-impl From<File> for FileDtox {
+impl From<File> for FileDto {
     fn from(file: File) -> Self {
         let img_versions = match file.img_versions {
             Some(versions_str) => {

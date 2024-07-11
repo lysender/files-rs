@@ -22,11 +22,10 @@ use crate::web::pagination::Paginated;
 use crate::{Error, Result};
 
 use super::{
-    File, FileDtox, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ListFilesParams,
+    File, FileDto, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ListFilesParams,
     ALLOWED_IMAGE_TYPES, MAX_DIMENSION, MAX_PREVIEW_DIMENSION, ORIGINAL_PATH,
 };
 
-const MAX_FILES: i32 = 1000;
 const MAX_PER_PAGE: i32 = 50;
 
 pub async fn list_files(
@@ -34,7 +33,7 @@ pub async fn list_files(
     bucket_name: &str,
     dir: &Dir,
     params: &ListFilesParams,
-) -> Result<Paginated<FileDtox>> {
+) -> Result<Paginated<FileDto>> {
     if let Err(errors) = params.validate() {
         return Err(Error::ValidationError(flatten_errors(&errors)));
     }
@@ -65,6 +64,11 @@ pub async fn list_files(
         }
     }
 
+    // Do not query if we already know there are no records
+    if total_pages == 0 {
+        return Ok(Paginated::new(Vec::new(), page, per_page, total_records));
+    }
+
     let params_copy = params.clone();
     let conn_result = db
         .interact(move |conn| {
@@ -89,7 +93,7 @@ pub async fn list_files(
     match conn_result {
         Ok(select_res) => match select_res {
             Ok(items) => {
-                let dto_items: Vec<FileDtox> = items.into_iter().map(|f| f.into()).collect();
+                let dto_items: Vec<FileDto> = items.into_iter().map(|f| f.into()).collect();
                 let dto_items = format_files(bucket_name, &dir.name, dto_items).await?;
                 Ok(Paginated::new(dto_items, page, per_page, total_records))
             }
@@ -147,7 +151,7 @@ pub async fn create_file(
     bucket: &Bucket,
     dir: &Dir,
     data: &FilePayload,
-) -> Result<FileDtox> {
+) -> Result<FileDto> {
     let mut file = init_file(dir, data)?;
 
     if file.is_image {
@@ -196,7 +200,7 @@ pub async fn create_file(
     }
 }
 
-fn cleanup_temp_uploads(data: &FilePayload, file: &FileDtox) -> Result<()> {
+fn cleanup_temp_uploads(data: &FilePayload, file: &FileDto) -> Result<()> {
     if file.is_image {
         // Cleanup versions
         if let Some(versions) = &file.img_versions {
@@ -224,7 +228,7 @@ fn cleanup_temp_uploads(data: &FilePayload, file: &FileDtox) -> Result<()> {
     Ok(())
 }
 
-fn init_file(dir: &Dir, data: &FilePayload) -> Result<FileDtox> {
+fn init_file(dir: &Dir, data: &FilePayload) -> Result<FileDto> {
     let mut is_image = false;
     let content_type = get_content_type(&data.path)?;
     if content_type.starts_with("image/") {
@@ -237,7 +241,7 @@ fn init_file(dir: &Dir, data: &FilePayload) -> Result<FileDtox> {
     // May be a few second delayed due to image processing
     let today = chrono::Utc::now().timestamp();
 
-    let file = FileDtox {
+    let file = FileDto {
         id: generate_id(),
         dir_id: dir.id.clone(),
         name: data.name.clone(),

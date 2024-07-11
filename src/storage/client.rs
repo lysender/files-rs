@@ -10,7 +10,7 @@ use google_cloud_storage::sign::SignedURLOptions;
 
 use crate::buckets::Bucket;
 use crate::dirs::Dir;
-use crate::files::{FileDtox, ImgVersionDto, ORIGINAL_PATH};
+use crate::files::{FileDto, ImgVersionDto, ORIGINAL_PATH};
 use crate::{Error, Result};
 
 pub async fn read_bucket(name: &str) -> Result<String> {
@@ -45,8 +45,8 @@ pub async fn upload_object(
     bucket: &Bucket,
     dir: &Dir,
     source_dir: &PathBuf,
-    file: FileDtox,
-) -> Result<FileDtox> {
+    file: FileDto,
+) -> Result<FileDto> {
     match file.is_image {
         true => upload_image_object(bucket, dir, source_dir, file).await,
         false => upload_regular_object(bucket, dir, source_dir, file).await,
@@ -57,8 +57,8 @@ async fn upload_regular_object(
     bucket: &Bucket,
     dir: &Dir,
     source_dir: &PathBuf,
-    file: FileDtox,
-) -> Result<FileDtox> {
+    file: FileDto,
+) -> Result<FileDto> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
     };
@@ -111,8 +111,8 @@ async fn upload_image_object(
     bucket: &Bucket,
     dir: &Dir,
     source_dir: &PathBuf,
-    file: FileDtox,
-) -> Result<FileDtox> {
+    file: FileDto,
+) -> Result<FileDto> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
     };
@@ -142,7 +142,7 @@ async fn upload_image_version(
     bucket: &Bucket,
     dir: &Dir,
     source_dir: &PathBuf,
-    file: &FileDtox,
+    file: &FileDto,
     version: &ImgVersionDto,
 ) -> Result<String> {
     // Prepare media
@@ -190,8 +190,8 @@ async fn upload_image_version(
 pub async fn format_files(
     bucket_name: &str,
     dir: &str,
-    files: Vec<FileDtox>,
-) -> Result<Vec<FileDtox>> {
+    files: Vec<FileDto>,
+) -> Result<Vec<FileDto>> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
     };
@@ -209,7 +209,7 @@ pub async fn format_files(
         }));
     }
 
-    let mut updated_files: Vec<FileDtox> = Vec::with_capacity(files.len());
+    let mut updated_files: Vec<FileDto> = Vec::with_capacity(files.len());
     for task in tasks {
         let Ok(res) = task.await else {
             return Err("Unable to extract data from spanwed task.".into());
@@ -225,8 +225,8 @@ async fn format_file(
     client: &Client,
     bucket_name: &str,
     dir: &str,
-    mut file: FileDtox,
-) -> Result<FileDtox> {
+    mut file: FileDto,
+) -> Result<FileDto> {
     if file.is_image {
         if let Some(versions) = &file.img_versions {
             let mut updated_versions: Vec<ImgVersionDto> = Vec::with_capacity(versions.len());
