@@ -23,7 +23,7 @@ use crate::{Error, Result};
 
 use super::{
     File, FileDtox, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ALLOWED_IMAGE_TYPES,
-    MAX_DIMENSION, MAX_PREVIEW_DIMENSION,
+    MAX_DIMENSION, MAX_PREVIEW_DIMENSION, ORIGINAL_PATH,
 };
 
 const MAX_FILES: i32 = 1000;
@@ -69,6 +69,10 @@ pub async fn create_file(
         Ok(insert_res) => match insert_res {
             Ok(_) => {
                 // Cleanup files before returning...
+                if let Err(e) = cleanup_temp_uploads(data, &uploaded_file) {
+                    // Can't afford to fail here, we will just log the error...
+                    error!("{}", e);
+                }
                 Ok(uploaded_file)
             }
             Err(e) => {
@@ -81,6 +85,34 @@ pub async fn create_file(
             Err("Error using the db connection".into())
         }
     }
+}
+
+fn cleanup_temp_uploads(data: &FilePayload, file: &FileDtox) -> Result<()> {
+    if file.is_image {
+        // Cleanup versions
+        if let Some(versions) = &file.img_versions {
+            let mut errors: Vec<String> = Vec::new();
+            for version in versions.iter() {
+                let source_file = version.to_path(&data.upload_dir, &file.filename);
+                if let Err(err) = std::fs::remove_file(&source_file) {
+                    errors.push(format!("Unable to remove file after upload: {}", err));
+                }
+            }
+
+            if errors.len() > 0 {
+                return Err(errors.join(", ").as_str().into());
+            }
+        }
+    } else {
+        // Cleanup original file
+        let upload_dir = data.upload_dir.clone();
+        let source_file = upload_dir.join(ORIGINAL_PATH).join(&file.filename);
+        if let Err(err) = std::fs::remove_file(&source_file) {
+            return Err(format!("Unable to remove file after upload: {}", err).into());
+        }
+    }
+
+    Ok(())
 }
 
 fn init_file(dir: &Dir, data: &FilePayload) -> Result<FileDtox> {
