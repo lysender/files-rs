@@ -63,7 +63,7 @@ pub async fn create_file(
         // Update file with versions
     }
 
-    upload_object(bucket, dir, &data.upload_dir, &file).await
+    upload_object(bucket, dir, &data.upload_dir, file).await
 }
 
 fn init_file(dir: &Dir, data: &FilePayload) -> Result<FileDtox> {

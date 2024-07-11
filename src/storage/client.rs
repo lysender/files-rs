@@ -11,7 +11,7 @@ use google_cloud_storage::sign::SignedURLOptions;
 
 use crate::buckets::Bucket;
 use crate::dirs::Dir;
-use crate::files::{FileDto, FileDtox, FileUrls, ORIGINAL_PATH};
+use crate::files::{FileDto, FileDtox, FileUrls, ImgVersionDto, ORIGINAL_PATH};
 use crate::{Error, Result};
 
 pub async fn read_bucket(name: &str) -> Result<String> {
@@ -46,7 +46,7 @@ pub async fn upload_object(
     bucket: &Bucket,
     dir: &Dir,
     source_dir: &PathBuf,
-    file: &FileDtox,
+    file: FileDtox,
 ) -> Result<FileDtox> {
     match file.is_image {
         true => upload_image_object(bucket, dir, source_dir, file).await,
@@ -58,7 +58,7 @@ async fn upload_regular_object(
     bucket: &Bucket,
     dir: &Dir,
     source_dir: &PathBuf,
-    file: &FileDtox,
+    file: FileDtox,
 ) -> Result<FileDtox> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
@@ -112,9 +112,80 @@ async fn upload_image_object(
     bucket: &Bucket,
     dir: &Dir,
     source_dir: &PathBuf,
-    file: &FileDtox,
+    file: FileDtox,
 ) -> Result<FileDtox> {
-    todo!()
+    let Ok(config) = ClientConfig::default().with_auth().await else {
+        return Err("Failed to initialize storage client configuration.".into());
+    };
+    let client = Client::new(config);
+
+    let mut file_copy = file.clone();
+    if let Some(versions) = &file.img_versions {
+        let mut updated_versions: Vec<ImgVersionDto> = Vec::with_capacity(versions.len());
+        for version in versions.iter() {
+            let mut version_copy = version.clone();
+            let url =
+                upload_image_version(&client, bucket, dir, source_dir, &file, version).await?;
+            version_copy.url = Some(url);
+
+            updated_versions.push(version_copy);
+        }
+        if updated_versions.len() > 0 {
+            file_copy.img_versions = Some(updated_versions);
+        }
+    }
+
+    Ok(file_copy)
+}
+
+async fn upload_image_version(
+    client: &Client,
+    bucket: &Bucket,
+    dir: &Dir,
+    source_dir: &PathBuf,
+    file: &FileDtox,
+    version: &ImgVersionDto,
+) -> Result<String> {
+    // Prepare media
+    let version_dir: String = version.version.to_string();
+    let file_path = format!("{}/{}/{}", &dir.name, &version_dir, &file.filename);
+    let mut media = Media::new(file_path.clone());
+    media.content_type = file.content_type.clone().into();
+    let upload_type = UploadType::Simple(media);
+
+    // Read file, preferred a stream but skill issues...
+    let source_path = source_dir.join(&version_dir).join(&file.filename);
+    let Ok(data) = std::fs::read(&source_path) else {
+        return Err("Failed to read image version for upload.".into());
+    };
+
+    let upload_res = client
+        .upload_object(
+            &UploadObjectRequest {
+                bucket: bucket.name.clone(),
+                ..Default::default()
+            },
+            data,
+            &upload_type,
+        )
+        .await;
+
+    match upload_res {
+        Ok(_) => {
+            let url = generate_url(&client, &bucket.name, &file_path).await?;
+            Ok(url)
+        }
+        Err(e) => match e {
+            CloudError::Response(gerr) => {
+                if gerr.code >= 400 && gerr.code < 500 {
+                    Err(Error::ValidationError(gerr.message))
+                } else {
+                    Err(format!("Google error: {}", gerr.message).as_str().into())
+                }
+            }
+            _ => Err("Failed to upload object to cloud storage.".into()),
+        },
+    }
 }
 
 pub async fn list_objects(bucket_name: &str, dir: &str) -> Result<Vec<FileDto>> {
