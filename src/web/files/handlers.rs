@@ -3,19 +3,17 @@ use axum::{
     http::StatusCode,
     Extension,
 };
-use tokio::{
-    fs::{create_dir_all, File},
-    io::AsyncWriteExt,
-};
+use tokio::{fs::create_dir_all, fs::File as AsyncFile, io::AsyncWriteExt};
 
 use crate::{
     auth::Actor,
     buckets::BucketDto,
     dirs::Dir,
-    files::{create_file, list_files, FilePayload, ImgVersion, ListFilesParams},
+    files::{create_file, list_files, File, FileDto, FilePayload, ImgVersion, ListFilesParams},
     roles::Permission,
+    storage::{format_file, format_files},
     util::slugify_prefixed,
-    web::{response::JsonResponse, server::AppState},
+    web::{pagination::Paginated, response::JsonResponse, server::AppState},
     Error, Result,
 };
 
@@ -34,8 +32,18 @@ pub async fn list_files_handler(
     let Some(params) = query else {
         return Err(Error::BadRequest("Invalid query parameters".to_string()));
     };
-    let files = list_files(&state.db_pool, &bucket.name, &dir, &params).await?;
-    Ok(JsonResponse::new(serde_json::to_string(&files).unwrap()))
+    let files = list_files(&state.db_pool, &dir, &params).await?;
+
+    // Generate download urls for each files
+    let items: Vec<FileDto> = files.data.into_iter().map(|f| f.into()).collect();
+    let items = format_files(&bucket.name, &dir.name, items).await?;
+    let listing = Paginated::new(
+        items,
+        files.meta.page,
+        files.meta.per_page,
+        files.meta.total_records,
+    );
+    Ok(JsonResponse::new(serde_json::to_string(&listing).unwrap()))
 }
 
 pub async fn create_file_handler(
@@ -71,7 +79,7 @@ pub async fn create_file_handler(
 
         // Prepare to save to file
         let file_path = orig_dir.as_path().join(&filename);
-        let Ok(mut file) = File::create(&file_path).await else {
+        let Ok(mut file) = AsyncFile::create(&file_path).await else {
             return Err("Unable to create file".into());
         };
 
@@ -100,10 +108,25 @@ pub async fn create_file_handler(
     let db_pool = state.db_pool.clone();
     let res = create_file(&db_pool, &bucket, &dir, &payload).await;
     match res {
-        Ok(file) => Ok(JsonResponse::with_status(
-            StatusCode::CREATED,
-            serde_json::to_string(&file).unwrap(),
-        )),
+        Ok(file) => {
+            let file_dto: FileDto = file.into();
+            let file_dto = format_file(&bucket.name, &dir.name, file_dto).await?;
+            Ok(JsonResponse::with_status(
+                StatusCode::CREATED,
+                serde_json::to_string(&file_dto).unwrap(),
+            ))
+        }
         Err(e) => Err(e),
     }
+}
+
+pub async fn get_file_handler(
+    Extension(bucket): Extension<BucketDto>,
+    Extension(dir): Extension<Dir>,
+    Extension(file): Extension<File>,
+) -> Result<JsonResponse> {
+    // Extract dir from the middleware extension
+    let file_dto: FileDto = file.clone().into();
+    let file_dto = format_file(&bucket.name, &dir.name, file_dto).await?;
+    Ok(JsonResponse::new(serde_json::to_string(&file_dto).unwrap()))
 }

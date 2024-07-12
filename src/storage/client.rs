@@ -45,8 +45,8 @@ pub async fn upload_object(
     bucket: &BucketDto,
     dir: &Dir,
     source_dir: &PathBuf,
-    file: FileDto,
-) -> Result<FileDto> {
+    file: &FileDto,
+) -> Result<()> {
     match file.is_image {
         true => upload_image_object(bucket, dir, source_dir, file).await,
         false => upload_regular_object(bucket, dir, source_dir, file).await,
@@ -57,8 +57,8 @@ async fn upload_regular_object(
     bucket: &BucketDto,
     dir: &Dir,
     source_dir: &PathBuf,
-    file: FileDto,
-) -> Result<FileDto> {
+    file: &FileDto,
+) -> Result<()> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
     };
@@ -88,12 +88,7 @@ async fn upload_regular_object(
         .await;
 
     match upload_res {
-        Ok(_) => {
-            let mut file_copy = file.clone();
-            let url = generate_url(&client, &bucket.name, &file_path).await?;
-            file_copy.url = Some(url);
-            Ok(file_copy)
-        }
+        Ok(_) => Ok(()),
         Err(e) => match e {
             CloudError::Response(gerr) => {
                 if gerr.code >= 400 && gerr.code < 500 {
@@ -111,30 +106,20 @@ async fn upload_image_object(
     bucket: &BucketDto,
     dir: &Dir,
     source_dir: &PathBuf,
-    file: FileDto,
-) -> Result<FileDto> {
+    file: &FileDto,
+) -> Result<()> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
     };
     let client = Client::new(config);
 
-    let mut file_copy = file.clone();
     if let Some(versions) = &file.img_versions {
-        let mut updated_versions: Vec<ImgVersionDto> = Vec::with_capacity(versions.len());
         for version in versions.iter() {
-            let mut version_copy = version.clone();
-            let url =
-                upload_image_version(&client, bucket, dir, source_dir, &file, version).await?;
-            version_copy.url = Some(url);
-
-            updated_versions.push(version_copy);
-        }
-        if updated_versions.len() > 0 {
-            file_copy.img_versions = Some(updated_versions);
+            let _ = upload_image_version(&client, bucket, dir, source_dir, &file, version).await?;
         }
     }
 
-    Ok(file_copy)
+    Ok(())
 }
 
 async fn upload_image_version(
@@ -144,7 +129,7 @@ async fn upload_image_version(
     source_dir: &PathBuf,
     file: &FileDto,
     version: &ImgVersionDto,
-) -> Result<String> {
+) -> Result<()> {
     // Prepare media
     let version_dir: String = version.version.to_string();
     let file_path = format!("{}/{}/{}", &dir.name, &version_dir, &file.filename);
@@ -170,10 +155,7 @@ async fn upload_image_version(
         .await;
 
     match upload_res {
-        Ok(_) => {
-            let url = generate_url(&client, &bucket.name, &file_path).await?;
-            Ok(url)
-        }
+        Ok(_) => Ok(()),
         Err(e) => match e {
             CloudError::Response(gerr) => {
                 if gerr.code >= 400 && gerr.code < 500 {
@@ -205,7 +187,7 @@ pub async fn format_files(
         let dir_name = dir.to_string();
 
         tasks.push(tokio::spawn(async move {
-            format_file(&client_copy, &bname, &dir_name, file_copy).await
+            format_file_single(&client_copy, &bname, &dir_name, file_copy).await
         }));
     }
 
@@ -221,7 +203,16 @@ pub async fn format_files(
     Ok(updated_files)
 }
 
-async fn format_file(
+pub async fn format_file(bucket_name: &str, dir: &str, file: FileDto) -> Result<FileDto> {
+    let Ok(config) = ClientConfig::default().with_auth().await else {
+        return Err("Failed to initialize storage client configuration.".into());
+    };
+    let client = Client::new(config);
+
+    format_file_single(&client, bucket_name, dir, file).await
+}
+
+async fn format_file_single(
     client: &Client,
     bucket_name: &str,
     dir: &str,

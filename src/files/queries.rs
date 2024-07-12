@@ -15,7 +15,7 @@ use validator::Validate;
 use crate::buckets::BucketDto;
 use crate::dirs::Dir;
 use crate::schema::files::{self, dsl};
-use crate::storage::{format_files, upload_object};
+use crate::storage::upload_object;
 use crate::util::generate_id;
 use crate::validators::flatten_errors;
 use crate::web::pagination::Paginated;
@@ -30,10 +30,9 @@ const MAX_PER_PAGE: i32 = 50;
 
 pub async fn list_files(
     db_pool: &Pool,
-    bucket_name: &str,
     dir: &Dir,
     params: &ListFilesParams,
-) -> Result<Paginated<FileDto>> {
+) -> Result<Paginated<File>> {
     if let Err(errors) = params.validate() {
         return Err(Error::ValidationError(flatten_errors(&errors)));
     }
@@ -92,11 +91,7 @@ pub async fn list_files(
 
     match conn_result {
         Ok(select_res) => match select_res {
-            Ok(items) => {
-                let dto_items: Vec<FileDto> = items.into_iter().map(|f| f.into()).collect();
-                let dto_items = format_files(bucket_name, &dir.name, dto_items).await?;
-                Ok(Paginated::new(dto_items, page, per_page, total_records))
-            }
+            Ok(items) => Ok(Paginated::new(items, page, per_page, total_records)),
             Err(e) => {
                 error!("{e}");
                 Err("Error reading files".into())
@@ -151,33 +146,34 @@ pub async fn create_file(
     bucket: &BucketDto,
     dir: &Dir,
     data: &FilePayload,
-) -> Result<FileDto> {
-    let mut file = init_file(dir, data)?;
+) -> Result<File> {
+    let mut file_dto = init_file(dir, data)?;
 
-    if bucket.images_only && !file.is_image {
+    if bucket.images_only && !file_dto.is_image {
         return Err(Error::ValidationError("Bucket only accepts images".into()));
     }
 
-    if file.is_image {
+    if file_dto.is_image {
         let versions = create_versions(data)?;
         if versions.len() > 0 {
-            file.img_versions = Some(versions);
+            file_dto.img_versions = Some(versions);
         }
     }
 
-    let uploaded_file = upload_object(bucket, dir, &data.upload_dir, file).await?;
+    let _ = upload_object(bucket, dir, &data.upload_dir, &file_dto).await?;
 
     // Save to database
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
-    let uploaded_copy = uploaded_file.clone();
-    let file_node: File = uploaded_copy.into();
+
+    let file: File = file_dto.clone().into();
+    let file_copy = file.clone();
 
     let conn_result = db
         .interact(move |conn| {
             diesel::insert_into(files::table)
-                .values(&file_node)
+                .values(&file_copy)
                 .execute(conn)
         })
         .await;
@@ -186,11 +182,11 @@ pub async fn create_file(
         Ok(insert_res) => match insert_res {
             Ok(_) => {
                 // Cleanup files before returning...
-                if let Err(e) = cleanup_temp_uploads(data, &uploaded_file) {
+                if let Err(e) = cleanup_temp_uploads(data, &file_dto) {
                     // Can't afford to fail here, we will just log the error...
                     error!("{}", e);
                 }
-                Ok(uploaded_file)
+                Ok(file)
             }
             Err(e) => {
                 error!("{}", e);
@@ -199,6 +195,37 @@ pub async fn create_file(
         },
         Err(e) => {
             error!("{}", e);
+            Err("Error using the db connection".into())
+        }
+    }
+}
+
+pub async fn get_file(pool: &Pool, id: &str) -> Result<Option<File>> {
+    let Ok(db) = pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+
+    let fid = id.to_string();
+    let conn_result = db
+        .interact(move |conn| {
+            dsl::files
+                .find(fid)
+                .select(File::as_select())
+                .first::<File>(conn)
+                .optional()
+        })
+        .await;
+
+    match conn_result {
+        Ok(select_res) => match select_res {
+            Ok(item) => Ok(item),
+            Err(e) => {
+                error!("{e}");
+                Err("Error reading files".into())
+            }
+        },
+        Err(e) => {
+            error!("{e}");
             Err("Error using the db connection".into())
         }
     }
