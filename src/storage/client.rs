@@ -8,7 +8,7 @@ use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, Up
 use google_cloud_storage::http::Error as CloudError;
 use google_cloud_storage::sign::SignedURLOptions;
 
-use crate::buckets::Bucket;
+use crate::buckets::BucketDto;
 use crate::dirs::Dir;
 use crate::files::{FileDto, ImgVersionDto, ORIGINAL_PATH};
 use crate::{Error, Result};
@@ -42,7 +42,7 @@ pub async fn read_bucket(name: &str) -> Result<String> {
 }
 
 pub async fn upload_object(
-    bucket: &Bucket,
+    bucket: &BucketDto,
     dir: &Dir,
     source_dir: &PathBuf,
     file: FileDto,
@@ -54,7 +54,7 @@ pub async fn upload_object(
 }
 
 async fn upload_regular_object(
-    bucket: &Bucket,
+    bucket: &BucketDto,
     dir: &Dir,
     source_dir: &PathBuf,
     file: FileDto,
@@ -108,7 +108,7 @@ async fn upload_regular_object(
 }
 
 async fn upload_image_object(
-    bucket: &Bucket,
+    bucket: &BucketDto,
     dir: &Dir,
     source_dir: &PathBuf,
     file: FileDto,
@@ -139,7 +139,7 @@ async fn upload_image_object(
 
 async fn upload_image_version(
     client: &Client,
-    bucket: &Bucket,
+    bucket: &BucketDto,
     dir: &Dir,
     source_dir: &PathBuf,
     file: &FileDto,

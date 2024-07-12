@@ -12,7 +12,7 @@ use image::DynamicImage;
 use tracing::error;
 use validator::Validate;
 
-use crate::buckets::Bucket;
+use crate::buckets::BucketDto;
 use crate::dirs::Dir;
 use crate::schema::files::{self, dsl};
 use crate::storage::{format_files, upload_object};
@@ -148,11 +148,15 @@ async fn list_files_count(db_pool: &Pool, dir_id: &str, params: &ListFilesParams
 
 pub async fn create_file(
     db_pool: &Pool,
-    bucket: &Bucket,
+    bucket: &BucketDto,
     dir: &Dir,
     data: &FilePayload,
 ) -> Result<FileDto> {
     let mut file = init_file(dir, data)?;
+
+    if bucket.images_only && !file.is_image {
+        return Err(Error::ValidationError("Bucket only accepts images".into()));
+    }
 
     if file.is_image {
         let versions = create_versions(data)?;

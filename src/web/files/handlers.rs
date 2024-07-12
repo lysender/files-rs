@@ -10,7 +10,7 @@ use tokio::{
 
 use crate::{
     auth::Actor,
-    buckets::Bucket,
+    buckets::BucketDto,
     dirs::Dir,
     files::{create_file, list_files, FilePayload, ImgVersion, ListFilesParams},
     roles::Permission,
@@ -22,7 +22,7 @@ use crate::{
 pub async fn list_files_handler(
     State(state): State<AppState>,
     Extension(actor): Extension<Actor>,
-    Extension(bucket): Extension<Bucket>,
+    Extension(bucket): Extension<BucketDto>,
     Extension(dir): Extension<Dir>,
     query: Option<Query<ListFilesParams>>,
 ) -> Result<JsonResponse> {
@@ -40,7 +40,7 @@ pub async fn list_files_handler(
 
 pub async fn create_file_handler(
     State(state): State<AppState>,
-    Extension(bucket): Extension<Bucket>,
+    Extension(bucket): Extension<BucketDto>,
     Extension(dir): Extension<Dir>,
     mut multipart: Multipart,
 ) -> Result<JsonResponse> {

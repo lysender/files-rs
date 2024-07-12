@@ -56,10 +56,6 @@ impl Actor {
         self.scope.contains(scope)
     }
 
-    pub fn has_roles(&self, roles: &Vec<Role>) -> bool {
-        roles.iter().all(|role| self.roles.contains(role))
-    }
-
     pub fn has_permissions(&self, permissions: &Vec<Permission>) -> bool {
         permissions
             .iter()
