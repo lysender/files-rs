@@ -8,7 +8,11 @@ use super::{get_bucket, list_buckets};
 pub async fn run_bucket_command(cmd: BucketCommand) -> Result<()> {
     match cmd {
         BucketCommand::List { client_id } => run_list_buckets(client_id).await,
-        BucketCommand::Create { client_id, name } => run_create_bucket(client_id, name).await,
+        BucketCommand::Create {
+            client_id,
+            name,
+            images_only,
+        } => run_create_bucket(client_id, name, images_only).await,
         BucketCommand::Delete { id } => run_delete_bucket(id).await,
     }
 }
@@ -22,10 +26,10 @@ async fn run_list_buckets(client_id: String) -> Result<()> {
     Ok(())
 }
 
-async fn run_create_bucket(client_id: String, name: String) -> Result<()> {
+async fn run_create_bucket(client_id: String, name: String, images_only: bool) -> Result<()> {
     let db_pool = create_db_pool();
 
-    let data = NewBucket { name };
+    let data = NewBucket { name, images_only };
     let bucket = create_bucket(&db_pool, &client_id, &data).await?;
     println!("ID: {}, Name: {}", bucket.id, bucket.name);
     println!("Created bucket.");

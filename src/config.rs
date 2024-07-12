@@ -151,7 +151,15 @@ pub enum UserCommand {
 
 #[derive(Subcommand, Debug)]
 pub enum BucketCommand {
-    List { client_id: String },
-    Create { client_id: String, name: String },
-    Delete { id: String },
+    List {
+        client_id: String,
+    },
+    Create {
+        client_id: String,
+        name: String,
+        images_only: bool,
+    },
+    Delete {
+        id: String,
+    },
 }

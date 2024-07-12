@@ -14,9 +14,11 @@ use crate::util::generate_id;
 use crate::validators::flatten_errors;
 use crate::{Error, Result};
 
+use super::BucketDto;
+
 const MAX_BUCKETS_PER_CLIENT: i32 = 50;
 
-pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Vec<Bucket>> {
+pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Vec<BucketDto>> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
@@ -34,7 +36,10 @@ pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Vec<Bucket>
 
     match conn_result {
         Ok(select_res) => match select_res {
-            Ok(items) => Ok(items),
+            Ok(items) => {
+                let dtos: Vec<BucketDto> = items.into_iter().map(|item| item.into()).collect();
+                Ok(dtos)
+            }
             Err(e) => {
                 error!("{}", e);
                 Err("Error reading buckets".into())
@@ -47,7 +52,7 @@ pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Vec<Bucket>
     }
 }
 
-pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) -> Result<Bucket> {
+pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) -> Result<BucketDto> {
     if let Err(errors) = data.validate() {
         return Err(Error::ValidationError(flatten_errors(&errors)));
     }
@@ -84,6 +89,7 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) ->
         id: generate_id(),
         client_id: client_id.to_string(),
         name: data_copy.name,
+        images_only: if data_copy.images_only { 1 } else { 0 },
         created_at: today,
     };
 
@@ -98,7 +104,7 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) ->
 
     match conn_result {
         Ok(insert_res) => match insert_res {
-            Ok(_) => Ok(bucket),
+            Ok(_) => Ok(bucket.into()),
             Err(e) => {
                 error!("{}", e);
                 Err("Error creating a bucket".into())
@@ -111,7 +117,7 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) ->
     }
 }
 
-pub async fn get_bucket(db_pool: &Pool, id: &str) -> Result<Option<Bucket>> {
+pub async fn get_bucket(db_pool: &Pool, id: &str) -> Result<Option<BucketDto>> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
@@ -129,7 +135,7 @@ pub async fn get_bucket(db_pool: &Pool, id: &str) -> Result<Option<Bucket>> {
 
     match conn_result {
         Ok(select_res) => match select_res {
-            Ok(item) => Ok(item),
+            Ok(item) => Ok(item.map(|item| item.into())),
             Err(e) => {
                 error!("{}", e);
                 Err("Error finding bucket".into())
@@ -146,7 +152,7 @@ pub async fn find_client_bucket(
     db_pool: &Pool,
     client_id: &str,
     name: &str,
-) -> Result<Option<Bucket>> {
+) -> Result<Option<BucketDto>> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
@@ -166,7 +172,7 @@ pub async fn find_client_bucket(
 
     match conn_result {
         Ok(select_res) => match select_res {
-            Ok(item) => Ok(item),
+            Ok(item) => Ok(item.map(|item| item.into())),
             Err(e) => {
                 error!("{}", e);
                 Err("Error finding bucket".into())
