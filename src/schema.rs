@@ -6,6 +6,7 @@ diesel::table! {
         client_id -> Text,
         name -> Text,
         created_at -> BigInt,
+        images_only -> Integer,
     }
 }
 
