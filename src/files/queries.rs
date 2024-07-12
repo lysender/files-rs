@@ -22,7 +22,7 @@ use crate::web::pagination::Paginated;
 use crate::{Error, Result};
 
 use super::{
-    File, FileDto, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ListFilesParams,
+    FileDto, FileObject, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ListFilesParams,
     ALLOWED_IMAGE_TYPES, MAX_DIMENSION, MAX_PREVIEW_DIMENSION, ORIGINAL_PATH,
 };
 
@@ -32,7 +32,7 @@ pub async fn list_files(
     db_pool: &Pool,
     dir: &Dir,
     params: &ListFilesParams,
-) -> Result<Paginated<File>> {
+) -> Result<Paginated<FileObject>> {
     if let Err(errors) = params.validate() {
         return Err(Error::ValidationError(flatten_errors(&errors)));
     }
@@ -83,9 +83,9 @@ pub async fn list_files(
             query
                 .limit(per_page as i64)
                 .offset(offset)
-                .select(File::as_select())
+                .select(FileObject::as_select())
                 .order(dsl::name.asc())
-                .load::<File>(conn)
+                .load::<FileObject>(conn)
         })
         .await;
 
@@ -146,7 +146,7 @@ pub async fn create_file(
     bucket: &BucketDto,
     dir: &Dir,
     data: &FilePayload,
-) -> Result<File> {
+) -> Result<FileObject> {
     let mut file_dto = init_file(dir, data)?;
 
     if bucket.images_only && !file_dto.is_image {
@@ -167,7 +167,7 @@ pub async fn create_file(
         return Err("Error getting db connection".into());
     };
 
-    let file: File = file_dto.clone().into();
+    let file: FileObject = file_dto.clone().into();
     let file_copy = file.clone();
 
     let conn_result = db
@@ -200,7 +200,7 @@ pub async fn create_file(
     }
 }
 
-pub async fn get_file(pool: &Pool, id: &str) -> Result<Option<File>> {
+pub async fn get_file(pool: &Pool, id: &str) -> Result<Option<FileObject>> {
     let Ok(db) = pool.get().await else {
         return Err("Error getting db connection".into());
     };
@@ -210,8 +210,8 @@ pub async fn get_file(pool: &Pool, id: &str) -> Result<Option<File>> {
         .interact(move |conn| {
             dsl::files
                 .find(fid)
-                .select(File::as_select())
-                .first::<File>(conn)
+                .select(FileObject::as_select())
+                .first::<FileObject>(conn)
                 .optional()
         })
         .await;

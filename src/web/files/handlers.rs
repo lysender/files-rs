@@ -3,13 +3,15 @@ use axum::{
     http::StatusCode,
     Extension,
 };
-use tokio::{fs::create_dir_all, fs::File as AsyncFile, io::AsyncWriteExt};
+use tokio::{fs::create_dir_all, fs::File, io::AsyncWriteExt};
 
 use crate::{
     auth::Actor,
     buckets::BucketDto,
     dirs::Dir,
-    files::{create_file, list_files, File, FileDto, FilePayload, ImgVersion, ListFilesParams},
+    files::{
+        create_file, list_files, FileDto, FileObject, FilePayload, ImgVersion, ListFilesParams,
+    },
     roles::Permission,
     storage::{format_file, format_files},
     util::slugify_prefixed,
@@ -79,7 +81,7 @@ pub async fn create_file_handler(
 
         // Prepare to save to file
         let file_path = orig_dir.as_path().join(&filename);
-        let Ok(mut file) = AsyncFile::create(&file_path).await else {
+        let Ok(mut file) = File::create(&file_path).await else {
             return Err("Unable to create file".into());
         };
 
@@ -123,7 +125,7 @@ pub async fn create_file_handler(
 pub async fn get_file_handler(
     Extension(bucket): Extension<BucketDto>,
     Extension(dir): Extension<Dir>,
-    Extension(file): Extension<File>,
+    Extension(file): Extension<FileObject>,
 ) -> Result<JsonResponse> {
     // Extract dir from the middleware extension
     let file_dto: FileDto = file.clone().into();

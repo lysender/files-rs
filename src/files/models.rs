@@ -14,7 +14,7 @@ pub const MAX_PREVIEW_DIMENSION: u32 = 2000;
 #[derive(Debug, Clone, Queryable, Selectable, Insertable, Serialize)]
 #[diesel(table_name = crate::schema::files)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
-pub struct File {
+pub struct FileObject {
     pub id: String,
     pub dir_id: String,
     pub name: String,
@@ -70,7 +70,7 @@ pub struct ListFilesParams {
 }
 
 /// Convert FileDto to File
-impl From<FileDto> for File {
+impl From<FileDto> for FileObject {
     fn from(file: FileDto) -> Self {
         let img_versions = match file.img_versions {
             Some(versions) => {
@@ -101,8 +101,8 @@ impl From<FileDto> for File {
 }
 
 /// Convert File to FileDtox
-impl From<File> for FileDto {
-    fn from(file: File) -> Self {
+impl From<FileObject> for FileDto {
+    fn from(file: FileObject) -> Self {
         let img_versions = match file.img_versions {
             Some(versions_str) => {
                 let versions: Vec<ImgVersionDto> = versions_str
