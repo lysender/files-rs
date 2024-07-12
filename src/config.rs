@@ -157,7 +157,7 @@ pub enum BucketCommand {
     Create {
         client_id: String,
         name: String,
-        images_only: bool,
+        images_only: String,
     },
     Delete {
         id: String,

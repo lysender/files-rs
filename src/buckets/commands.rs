@@ -26,10 +26,23 @@ async fn run_list_buckets(client_id: String) -> Result<()> {
     Ok(())
 }
 
-async fn run_create_bucket(client_id: String, name: String, images_only: bool) -> Result<()> {
+async fn run_create_bucket(client_id: String, name: String, images_only: String) -> Result<()> {
     let db_pool = create_db_pool();
 
-    let data = NewBucket { name, images_only };
+    let res: Result<bool> = match images_only.as_str() {
+        "true" => Ok(true),
+        "false" => Ok(false),
+        _ => Err("Invalid boolean".into()),
+    };
+
+    let Ok(img_only) = res else {
+        return Err("images_only must be either true or false".into());
+    };
+
+    let data = NewBucket {
+        name,
+        images_only: img_only,
+    };
     let bucket = create_bucket(&db_pool, &client_id, &data).await?;
     println!("ID: {}, Name: {}", bucket.id, bucket.name);
     println!("Created bucket.");
