@@ -26,7 +26,6 @@ pub async fn check_health() -> Result<()> {
     println!("Status: {}", health.status);
     println!("Message: {}", health.message);
     println!("Checks:");
-    println!("  Auth: {}", health.checks.auth);
     println!("  Cloud Storage: {}", health.checks.cloud_storage);
     println!("  Database: {}", health.checks.database);
     println!("  Secrets: {}", health.checks.secrets);

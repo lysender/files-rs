@@ -3,13 +3,11 @@ use dotenvy::dotenv;
 use serde::Deserialize;
 use std::{env, path::PathBuf};
 
-use crate::{util::valid_id, Result};
+use crate::Result;
 
 pub const DATABASE_URL: &str = "DATABASE_URL";
 pub const UPLOAD_DIR: &str = "UPLOAD_DIR";
-pub const CLIENT_ID: &str = "CLIENT_ID";
 pub const JWT_SECRET: &str = "JWT_SECRET";
-pub const ADMIN_HASH: &str = "ADMIN_HASH";
 pub const GOOGLE_APPLICATION_CREDENTIALS: &str = "GOOGLE_APPLICATION_CREDENTIALS";
 pub const GOOGLE_PROJECT_ID: &str = "GOOGLE_PROJECT_ID";
 pub const PORT: &str = "PORT";
@@ -17,7 +15,6 @@ pub const RUST_LOG: &str = "RUST_LOG";
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
-    pub client_id: String,
     pub jwt_secret: String,
     pub cloud_credentials: String,
     pub upload_dir: PathBuf,
@@ -40,7 +37,6 @@ impl Config {
         // Load configuration from environment variables
         dotenv().ok();
         let database_url = env::var(DATABASE_URL).expect("DATABASE_URL must be set");
-        let client_id = env::var(CLIENT_ID).expect("CLIENT_ID must be set");
         let jwt_secret = env::var(JWT_SECRET).expect("JWT_SECRET must be set");
         let cloud_credentials = env::var(GOOGLE_APPLICATION_CREDENTIALS)
             .expect("GOOGLE_APPLICATION_CREDENTIALS must be set");
@@ -49,12 +45,6 @@ impl Config {
 
         if database_url.len() == 0 {
             return Err("DATABASE_URL is required.".into());
-        }
-        if client_id.len() == 0 {
-            return Err("CLIENT_ID is required.".into());
-        }
-        if !valid_id(&client_id) {
-            return Err("CLIENT_ID is not a valid id.".into());
         }
         if jwt_secret.len() == 0 {
             return Err("JWT_SECRET is required.".into());
@@ -77,7 +67,6 @@ impl Config {
         }
 
         Ok(Self {
-            client_id,
             jwt_secret,
             cloud_credentials,
             upload_dir,

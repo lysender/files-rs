@@ -248,9 +248,8 @@ cargo install diesel_cli --no-default-features --features sqlite
 
 ```
 DATABASE_URL=sqlite://db/db.sqlite3
-CLIENT_ID=value
-ADMIN_HASH=value
 JWT_SECRET=value
+UPLOAD_DIR=/path/to/upload_dir
 PORT=11001
 
 GOOGLE_PROJECT_ID=value
@@ -289,8 +288,6 @@ Group=www-data
 
 Environment="DATABASE_URL=sqlite:///path/to/db.sqlite3"
 Environment="UPLOAD_DIR=/path/to/upload_dir"
-Environment="CLIENT_ID=value"
-Environment="ADMIN_HASH=value"
 Environment="JWT_SECRET=value"
 Environment="PORT=11001"
 Environment="GOOGLE_PROJECT_ID=value"

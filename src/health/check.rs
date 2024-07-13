@@ -5,7 +5,7 @@ use tracing::error;
 
 use crate::{
     buckets::test_read_bucket,
-    config::{ADMIN_HASH, GOOGLE_PROJECT_ID, JWT_SECRET},
+    config::{GOOGLE_PROJECT_ID, JWT_SECRET},
     storage::test_list_buckets,
     Result,
 };
@@ -41,22 +41,11 @@ async fn perform_checks(db_pool: &Pool) -> Result<HealthChecks> {
 
     let mut checks = HealthChecks::new();
 
-    checks.auth = check_auth().await?;
     checks.cloud_storage = check_cloud_storage().await?;
     checks.database = check_database(db_pool).await?;
     checks.secrets = check_secrets().await?;
 
     Ok(checks)
-}
-
-async fn check_auth() -> Result<String> {
-    match env::var(ADMIN_HASH) {
-        Ok(_) => Ok("UP".to_string()),
-        Err(_) => {
-            error!("ADMIN_HASH is not set");
-            Ok("DOWN".to_string())
-        }
-    }
 }
 
 async fn check_cloud_storage() -> Result<String> {
