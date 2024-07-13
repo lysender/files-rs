@@ -142,26 +142,6 @@ pub struct ImgDimension {
     pub height: u32,
 }
 
-/// Try to convert ImgVersion to ImgDimension
-impl TryFrom<ImgVersion> for ImgDimension {
-    type Error = String;
-
-    fn try_from(value: ImgVersion) -> core::result::Result<Self, Self::Error> {
-        match value {
-            ImgVersion::Original => {
-                Err("Original image version does not have fixed dimension".to_string())
-            }
-            ImgVersion::Preview => {
-                Err("Preview image version does not have fixed dimension".to_string())
-            }
-            ImgVersion::Thumbnail => Ok(Self {
-                width: 150,
-                height: 125,
-            }),
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum ImgVersion {
     #[serde(rename = "orig")]
