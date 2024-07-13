@@ -6,7 +6,7 @@ use tower_http::limit::RequestBodyLimitLayer;
 use crate::web::middlewares::file_middleware;
 use crate::web::server::AppState;
 
-use super::{create_file_handler, get_file_handler, list_files_handler};
+use super::{create_file_handler, delete_file_handler, get_file_handler, list_files_handler};
 
 pub fn files_routes(state: AppState) -> Router<AppState> {
     Router::new()
@@ -19,7 +19,7 @@ pub fn files_routes(state: AppState) -> Router<AppState> {
 
 fn inner_file_routes(state: AppState) -> Router<AppState> {
     Router::new()
-        .route("/", get(get_file_handler))
+        .route("/", get(get_file_handler).delete(delete_file_handler))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             file_middleware,

@@ -4,6 +4,7 @@ use std::time::Duration;
 use google_cloud_storage::client::{Client, ClientConfig};
 use google_cloud_storage::http::buckets::get::GetBucketRequest;
 use google_cloud_storage::http::buckets::list::ListBucketsRequest;
+use google_cloud_storage::http::objects::delete::DeleteObjectRequest;
 use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
 use google_cloud_storage::http::Error as CloudError;
 use google_cloud_storage::sign::SignedURLOptions;
@@ -169,6 +170,57 @@ async fn upload_image_version(
     }
 }
 
+pub async fn delete_file_object(bucket_name: &str, dir_name: &str, file: &FileDto) -> Result<()> {
+    let Ok(config) = ClientConfig::default().with_auth().await else {
+        return Err("Failed to initialize storage client configuration.".into());
+    };
+    let client = Client::new(config);
+
+    if file.is_image {
+        // Delete all versions
+        if let Some(versions) = &file.img_versions {
+            for version in versions.iter() {
+                let path = format!(
+                    "{}/{}/{}",
+                    dir_name,
+                    version.version.to_string(),
+                    &file.filename
+                );
+                let _ = delete_object_by_path(&client, bucket_name, &path).await?;
+            }
+        }
+    } else {
+        let path = format!("{}/{}/{}", dir_name, ORIGINAL_PATH, &file.filename);
+        let _ = delete_object_by_path(&client, bucket_name, &path).await?;
+    }
+
+    Ok(())
+}
+
+async fn delete_object_by_path(client: &Client, bucket_name: &str, path: &str) -> Result<()> {
+    let res = client
+        .delete_object(&DeleteObjectRequest {
+            bucket: bucket_name.to_string(),
+            object: path.to_string(),
+            ..Default::default()
+        })
+        .await;
+
+    match res {
+        Ok(_) => Ok(()),
+        Err(e) => match e {
+            CloudError::Response(gerr) => {
+                if gerr.code >= 400 && gerr.code < 500 {
+                    Err(Error::ValidationError(gerr.message))
+                } else {
+                    Err(format!("Google error: {}", gerr.message).as_str().into())
+                }
+            }
+            _ => Err("Failed to delete object from cloud storage.".into()),
+        },
+    }
+}
+
 pub async fn format_files(
     bucket_name: &str,
     dir: &str,
@@ -203,19 +255,19 @@ pub async fn format_files(
     Ok(updated_files)
 }
 
-pub async fn format_file(bucket_name: &str, dir: &str, file: FileDto) -> Result<FileDto> {
+pub async fn format_file(bucket_name: &str, dir_name: &str, file: FileDto) -> Result<FileDto> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
     };
     let client = Client::new(config);
 
-    format_file_single(&client, bucket_name, dir, file).await
+    format_file_single(&client, bucket_name, dir_name, file).await
 }
 
 async fn format_file_single(
     client: &Client,
     bucket_name: &str,
-    dir: &str,
+    dir_name: &str,
     mut file: FileDto,
 ) -> Result<FileDto> {
     if file.is_image {
@@ -225,7 +277,12 @@ async fn format_file_single(
                 let url = generate_url(
                     client,
                     bucket_name,
-                    &format!("{}/{}/{}", dir, version.version.to_string(), file.filename),
+                    &format!(
+                        "{}/{}/{}",
+                        dir_name,
+                        version.version.to_string(),
+                        file.filename
+                    ),
                 )
                 .await?;
                 let mut version_copy = version.clone();
@@ -240,7 +297,7 @@ async fn format_file_single(
         let url = generate_url(
             client,
             bucket_name,
-            &format!("{}/{}/{}", dir, ORIGINAL_PATH, file.filename),
+            &format!("{}/{}/{}", dir_name, ORIGINAL_PATH, file.filename),
         )
         .await?;
         file.url = Some(url);

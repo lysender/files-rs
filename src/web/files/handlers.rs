@@ -10,10 +10,11 @@ use crate::{
     buckets::BucketDto,
     dirs::Dir,
     files::{
-        create_file, list_files, FileDto, FileObject, FilePayload, ImgVersion, ListFilesParams,
+        create_file, delete_file, list_files, FileDto, FileObject, FilePayload, ImgVersion,
+        ListFilesParams,
     },
     roles::Permission,
-    storage::{format_file, format_files},
+    storage::{delete_file_object, format_file, format_files},
     util::slugify_prefixed,
     web::{pagination::Paginated, response::JsonResponse, server::AppState},
     Error, Result,
@@ -50,10 +51,16 @@ pub async fn list_files_handler(
 
 pub async fn create_file_handler(
     State(state): State<AppState>,
+    Extension(actor): Extension<Actor>,
     Extension(bucket): Extension<BucketDto>,
     Extension(dir): Extension<Dir>,
     mut multipart: Multipart,
 ) -> Result<JsonResponse> {
+    let permissions = vec![Permission::FilesCreate];
+    if !actor.has_permissions(&permissions) {
+        return Err(Error::Forbidden("Insufficient permissions".to_string()));
+    }
+
     let mut payload: Option<FilePayload> = None;
 
     while let Some(mut field) = multipart.next_field().await.unwrap() {
@@ -131,4 +138,30 @@ pub async fn get_file_handler(
     let file_dto: FileDto = file.clone().into();
     let file_dto = format_file(&bucket.name, &dir.name, file_dto).await?;
     Ok(JsonResponse::new(serde_json::to_string(&file_dto).unwrap()))
+}
+
+pub async fn delete_file_handler(
+    State(state): State<AppState>,
+    Extension(actor): Extension<Actor>,
+    Extension(bucket): Extension<BucketDto>,
+    Extension(dir): Extension<Dir>,
+    Extension(file): Extension<FileObject>,
+) -> Result<JsonResponse> {
+    let permissions = vec![Permission::FilesDelete];
+    if !actor.has_permissions(&permissions) {
+        return Err(Error::Forbidden("Insufficient permissions".to_string()));
+    }
+
+    // Delete record
+    let db_pool = state.db_pool.clone();
+    let _ = delete_file(&db_pool, &file.id).await?;
+
+    // Delete file(s) from storage
+    let dto: FileDto = file.into();
+    let _ = delete_file_object(&bucket.name, &dir.name, &dto).await?;
+
+    Ok(JsonResponse::with_status(
+        StatusCode::NO_CONTENT,
+        "".to_string(),
+    ))
 }
