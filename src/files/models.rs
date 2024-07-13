@@ -10,6 +10,7 @@ pub const ALLOWED_IMAGE_TYPES: [&str; 4] = ["image/jpeg", "image/pjpeg", "image/
 /// Maximum image dimension before creating a preview version
 pub const MAX_DIMENSION: u32 = 1000;
 pub const MAX_PREVIEW_DIMENSION: u32 = 2000;
+pub const MAX_THUMB_DIMENSION: u32 = 200;
 
 #[derive(Debug, Clone, Queryable, Selectable, Insertable, Serialize)]
 #[diesel(table_name = crate::schema::files)]

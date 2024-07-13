@@ -23,7 +23,7 @@ use crate::{Error, Result};
 
 use super::{
     FileDto, FileObject, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ListFilesParams,
-    ALLOWED_IMAGE_TYPES, MAX_DIMENSION, MAX_PREVIEW_DIMENSION, ORIGINAL_PATH,
+    ALLOWED_IMAGE_TYPES, MAX_DIMENSION, MAX_PREVIEW_DIMENSION, MAX_THUMB_DIMENSION, ORIGINAL_PATH,
 };
 
 const MAX_PER_PAGE: i32 = 50;
@@ -347,7 +347,7 @@ fn create_versions(data: &FilePayload) -> Result<Vec<ImgVersionDto>> {
     }
 
     // Create thumbnail
-    let thumb = create_thumbnail(data, rotated_img)?;
+    let thumb = create_thumbnail(data, &rotated_img)?;
     versions.push(thumb);
 
     Ok(versions)
@@ -396,61 +396,44 @@ fn create_preview(data: &FilePayload, img: &DynamicImage) -> Result<ImgVersionDt
     Ok(version)
 }
 
-fn create_thumbnail(data: &FilePayload, mut img: DynamicImage) -> Result<ImgVersionDto> {
+fn create_thumbnail(data: &FilePayload, img: &DynamicImage) -> Result<ImgVersionDto> {
     // Prepare dir
-    let thumb_dir = data
+    let prev_dir = data
         .upload_dir
         .clone()
         .join(ImgVersion::Thumbnail.to_string());
 
-    if let Err(err) = std::fs::create_dir_all(&thumb_dir) {
-        return Err(format!("Unable to create thumbnail dir: {}", err).into());
+    if let Err(err) = std::fs::create_dir_all(&prev_dir) {
+        return Err(format!("Unable to create preview dir: {}", err).into());
     }
 
-    let Ok(dim) = ImgDimension::try_from(ImgVersion::Thumbnail) else {
-        return Err("Unable to identify thumbnail dimension settings".into());
-    };
+    // Either resize to max dimension or original dimension
+    // whichever is smaller
+    let mut max_width = MAX_THUMB_DIMENSION;
+    if img.width() < MAX_THUMB_DIMENSION {
+        max_width = img.width();
+    }
+    let mut max_height = MAX_THUMB_DIMENSION;
+    if img.height() < MAX_THUMB_DIMENSION {
+        max_height = img.height();
+    }
 
-    let source_width = img.width();
-    let source_height = img.height();
-
-    // This one is brought to you by chad jipitty
-    let aspect_ratio = dim.width as f32 / dim.height as f32;
-    let current_aspect_ratio = source_width as f32 / source_height as f32;
-
-    let (crop_width, crop_height, x_offset, y_offset) = if current_aspect_ratio > aspect_ratio {
-        // Crop horizontally (landscape mode)
-        let crop_width = (source_height as f32 * aspect_ratio) as u32;
-        let x_offset = (source_width - crop_width) / 2;
-        (crop_width, source_height, x_offset, 0)
-    } else {
-        // Crop vertically (portrait mode)
-        let crop_height = (source_width as f32 / aspect_ratio) as u32;
-        let y_offset = (source_height - crop_height) / 2;
-        (source_width, crop_height, 0, y_offset)
-    };
-
-    // Crop the image using scaled dimensions, cutting off some parts
-    let cropped = img.crop(x_offset, y_offset, crop_width, crop_height);
-
-    // Resize the cropped image to the desired dimensions
-    let resized_img = cropped.resize_exact(dim.width, dim.height, imageops::FilterType::Lanczos3);
+    let resized_img = img.resize(max_width, max_height, imageops::FilterType::Lanczos3);
 
     // Save the resized image
     let version = ImgVersionDto {
         version: ImgVersion::Thumbnail,
         dimension: ImgDimension {
-            width: dim.width,
-            height: dim.height,
+            width: resized_img.width(),
+            height: resized_img.height(),
         },
         url: None,
     };
 
     let dest_file = version.to_path(&data.upload_dir, &data.filename);
 
-    // All non-original versions will be saved as JPEG
     if let Err(err) = resized_img.save(dest_file) {
-        return Err(format!("Unable to save thumbnail: {}", err).into());
+        return Err(format!("Unable to save preview: {}", err).into());
     }
 
     Ok(version)
