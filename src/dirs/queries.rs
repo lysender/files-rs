@@ -7,6 +7,7 @@ use tracing::error;
 use validator::Validate;
 
 use crate::dirs::{Dir, NewDir, UpdateDir};
+use crate::files::count_dir_files;
 use crate::schema::dirs::{self, dsl};
 use crate::util::generate_id;
 use crate::validators::flatten_errors;
@@ -365,6 +366,14 @@ pub async fn delete_dir(db_pool: &Pool, id: &str) -> Result<()> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
+
+    // Do not delete if there are still files inside
+    let file_count = count_dir_files(db_pool, id).await?;
+    if file_count > 0 {
+        return Err(Error::ValidationError(
+            "Cannot delete directory with files inside".to_string(),
+        ));
+    }
 
     let dir_id = id.to_string();
     let conn_result = db

@@ -141,6 +141,36 @@ async fn list_files_count(db_pool: &Pool, dir_id: &str, params: &ListFilesParams
     }
 }
 
+pub async fn count_dir_files(db_pool: &Pool, dir_id: &str) -> Result<i64> {
+    let Ok(db) = db_pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+
+    let did = dir_id.to_string();
+    let conn_result = db
+        .interact(move |conn| {
+            dsl::files
+                .filter(dsl::dir_id.eq(did.as_str()))
+                .select(count_star())
+                .get_result::<i64>(conn)
+        })
+        .await;
+
+    match conn_result {
+        Ok(count_res) => match count_res {
+            Ok(count) => Ok(count),
+            Err(e) => {
+                error!("{}", e);
+                Err("Error counting files".into())
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            Err("Error using the db connection".into())
+        }
+    }
+}
+
 pub async fn create_file(
     db_pool: &Pool,
     bucket: &BucketDto,
