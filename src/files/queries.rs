@@ -13,7 +13,7 @@ use tracing::error;
 use validator::Validate;
 
 use crate::buckets::BucketDto;
-use crate::dirs::Dir;
+use crate::dirs::{update_dir_timestamp, Dir};
 use crate::schema::files::{self, dsl};
 use crate::storage::upload_object;
 use crate::util::generate_id;
@@ -163,7 +163,8 @@ pub async fn create_file(
     let _ = upload_object(bucket, dir, &data.upload_dir, &file_dto).await?;
 
     // Save to database
-    let Ok(db) = db_pool.get().await else {
+    let file_db_pool = db_pool.clone();
+    let Ok(db) = file_db_pool.get().await else {
         return Err("Error getting db connection".into());
     };
 
@@ -186,6 +187,15 @@ pub async fn create_file(
                     // Can't afford to fail here, we will just log the error...
                     error!("{}", e);
                 }
+
+                // Also update dir
+                let today = chrono::Utc::now().timestamp();
+                let dir_result = update_dir_timestamp(db_pool, &dir.id, today).await;
+                if let Err(e) = dir_result {
+                    // Can't afford to fail here, we will just log the error...
+                    error!("{}", e);
+                }
+
                 Ok(file)
             }
             Err(e) => {

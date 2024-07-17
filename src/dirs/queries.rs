@@ -331,6 +331,36 @@ pub async fn update_dir(db_pool: &Pool, id: &str, data: &UpdateDir) -> Result<bo
     }
 }
 
+pub async fn update_dir_timestamp(db_pool: &Pool, id: &str, timestamp: i64) -> Result<bool> {
+    let Ok(db) = db_pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+
+    let dir_id = id.to_string();
+    let conn_result = db
+        .interact(move |conn| {
+            diesel::update(dsl::dirs)
+                .filter(dsl::id.eq(dir_id.as_str()))
+                .set(dsl::updated_at.eq(timestamp))
+                .execute(conn)
+        })
+        .await;
+
+    match conn_result {
+        Ok(update_res) => match update_res {
+            Ok(item) => Ok(item > 0),
+            Err(e) => {
+                error!("{}", e);
+                Err("Error updating directory timestamp".into())
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            Err("Error using the db connection".into())
+        }
+    }
+}
+
 pub async fn delete_dir(db_pool: &Pool, id: &str) -> Result<()> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
