@@ -84,7 +84,7 @@ pub async fn list_files(
                 .limit(per_page as i64)
                 .offset(offset)
                 .select(FileObject::as_select())
-                .order(dsl::name.asc())
+                .order(dsl::created_at.desc())
                 .load::<FileObject>(conn)
         })
         .await;
