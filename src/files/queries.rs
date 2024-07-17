@@ -231,7 +231,9 @@ pub async fn create_file(
 
     // Name must be unique for the dir (not filename)
     if let Some(_) = find_dir_file(db_pool, &dir.id, &data.name).await? {
-        return Err(Error::ValidationError("Name already exists".to_string()));
+        return Err(Error::ValidationError(
+            "File with the same name already exists".to_string(),
+        ));
     }
 
     if file_dto.is_image {
