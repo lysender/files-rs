@@ -75,7 +75,7 @@ pub async fn list_dirs(
                 .limit(per_page as i64)
                 .offset(offset)
                 .select(Dir::as_select())
-                .order(dsl::created_at.desc())
+                .order(dsl::updated_at.desc())
                 .load::<Dir>(conn)
         })
         .await;
