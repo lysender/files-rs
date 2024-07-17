@@ -27,6 +27,7 @@ use super::{
 };
 
 const MAX_PER_PAGE: i32 = 50;
+const MAX_FILES: i32 = 1000;
 
 pub async fn list_files(
     db_pool: &Pool,
@@ -141,6 +142,39 @@ async fn list_files_count(db_pool: &Pool, dir_id: &str, params: &ListFilesParams
     }
 }
 
+pub async fn find_dir_file(pool: &Pool, dir_id: &str, name: &str) -> Result<Option<FileObject>> {
+    let Ok(db) = pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+
+    let did = dir_id.to_string();
+    let name_copy = name.to_string();
+    let conn_result = db
+        .interact(move |conn| {
+            dsl::files
+                .filter(dsl::dir_id.eq(did.as_str()))
+                .filter(dsl::name.eq(name_copy.as_str()))
+                .select(FileObject::as_select())
+                .first::<FileObject>(conn)
+                .optional()
+        })
+        .await;
+
+    match conn_result {
+        Ok(select_res) => match select_res {
+            Ok(item) => Ok(item),
+            Err(e) => {
+                error!("{}", e);
+                Err("Error finding file".into())
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            Err("Error using the db connection".into())
+        }
+    }
+}
+
 pub async fn count_dir_files(db_pool: &Pool, dir_id: &str) -> Result<i64> {
     let Ok(db) = db_pool.get().await else {
         return Err("Error getting db connection".into());
@@ -181,6 +215,23 @@ pub async fn create_file(
 
     if bucket.images_only && !file_dto.is_image {
         return Err(Error::ValidationError("Bucket only accepts images".into()));
+    }
+
+    // Limit the number of files per dir
+    let _ = match count_dir_files(db_pool, &dir.id).await {
+        Ok(count) => {
+            if count >= MAX_FILES as i64 {
+                return Err(Error::ValidationError(
+                    "Maximum number of files reached".to_string(),
+                ));
+            }
+        }
+        Err(e) => return Err(e),
+    };
+
+    // Name must be unique for the dir (not filename)
+    if let Some(_) = find_dir_file(db_pool, &dir.id, &data.name).await? {
+        return Err(Error::ValidationError("Name already exists".to_string()));
     }
 
     if file_dto.is_image {
