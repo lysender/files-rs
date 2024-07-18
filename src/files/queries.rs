@@ -214,6 +214,9 @@ pub async fn create_file(
     let mut file_dto = init_file(dir, data)?;
 
     if bucket.images_only && !file_dto.is_image {
+        if let Err(e) = cleanup_temp_uploads(data, None) {
+            error!("Cleanup orig file: {}", e);
+        }
         return Err(Error::ValidationError("Bucket only accepts images".into()));
     }
 
@@ -221,6 +224,9 @@ pub async fn create_file(
     let _ = match count_dir_files(db_pool, &dir.id).await {
         Ok(count) => {
             if count >= MAX_FILES as i64 {
+                if let Err(e) = cleanup_temp_uploads(data, None) {
+                    error!("Cleanup orig file: {}", e);
+                }
                 return Err(Error::ValidationError(
                     "Maximum number of files reached".to_string(),
                 ));
@@ -231,23 +237,43 @@ pub async fn create_file(
 
     // Name must be unique for the dir (not filename)
     if let Some(_) = find_dir_file(db_pool, &dir.id, &data.name).await? {
+        if let Err(e) = cleanup_temp_uploads(data, None) {
+            error!("Cleanup orig file: {}", e);
+        }
         return Err(Error::ValidationError(
             "File with the same name already exists".to_string(),
         ));
     }
 
     if file_dto.is_image {
-        let versions = create_versions(data)?;
-        if versions.len() > 0 {
-            file_dto.img_versions = Some(versions);
-        }
+        match create_versions(data) {
+            Ok(versions) => {
+                if versions.len() > 0 {
+                    file_dto.img_versions = Some(versions);
+                }
+            }
+            Err(e) => {
+                if let Err(e) = cleanup_temp_uploads(data, None) {
+                    error!("Cleanup orig file: {}", e);
+                }
+                return Err(e);
+            }
+        };
     }
 
-    let _ = upload_object(bucket, dir, &data.upload_dir, &file_dto).await?;
+    if let Err(upload_err) = upload_object(bucket, dir, &data.upload_dir, &file_dto).await {
+        if let Err(e) = cleanup_temp_uploads(data, Some(&file_dto)) {
+            error!("Cleanup file(s): {}", e);
+        }
+        return Err(upload_err);
+    }
 
     // Save to database
     let file_db_pool = db_pool.clone();
     let Ok(db) = file_db_pool.get().await else {
+        if let Err(e) = cleanup_temp_uploads(data, Some(&file_dto)) {
+            error!("Cleanup file(s): {}", e);
+        }
         return Err("Error getting db connection".into());
     };
 
@@ -266,9 +292,9 @@ pub async fn create_file(
         Ok(insert_res) => match insert_res {
             Ok(_) => {
                 // Cleanup files before returning...
-                if let Err(e) = cleanup_temp_uploads(data, &file_dto) {
+                if let Err(e) = cleanup_temp_uploads(data, Some(&file_dto)) {
                     // Can't afford to fail here, we will just log the error...
-                    error!("{}", e);
+                    error!("Cleanup file(s): {}", e);
                 }
 
                 // Also update dir
@@ -283,11 +309,17 @@ pub async fn create_file(
             }
             Err(e) => {
                 error!("{}", e);
+                if let Err(e) = cleanup_temp_uploads(data, Some(&file_dto)) {
+                    error!("Cleanup file(s): {}", e);
+                }
                 Err("Error creating file".into())
             }
         },
         Err(e) => {
             error!("{}", e);
+            if let Err(e) = cleanup_temp_uploads(data, Some(&file_dto)) {
+                error!("Cleanup file(s): {}", e);
+            }
             Err("Error using the db connection".into())
         }
     }
@@ -349,26 +381,36 @@ pub async fn delete_file(pool: &Pool, id: &str) -> Result<()> {
     }
 }
 
-fn cleanup_temp_uploads(data: &FilePayload, file: &FileDto) -> Result<()> {
-    if file.is_image {
-        // Cleanup versions
-        if let Some(versions) = &file.img_versions {
-            let mut errors: Vec<String> = Vec::new();
-            for version in versions.iter() {
-                let source_file = version.to_path(&data.upload_dir, &file.filename);
-                if let Err(err) = std::fs::remove_file(&source_file) {
-                    errors.push(format!("Unable to remove file after upload: {}", err));
+fn cleanup_temp_uploads(data: &FilePayload, file: Option<&FileDto>) -> Result<()> {
+    if let Some(file) = file {
+        if file.is_image {
+            // Cleanup versions
+            if let Some(versions) = &file.img_versions {
+                let mut errors: Vec<String> = Vec::new();
+                for version in versions.iter() {
+                    let source_file = version.to_path(&data.upload_dir, &file.filename);
+                    // Collect errors, can't afford to stop here
+                    if let Err(err) = std::fs::remove_file(&source_file) {
+                        errors.push(format!("Unable to remove file after upload: {}", err));
+                    }
+                }
+
+                if errors.len() > 0 {
+                    return Err(errors.join(", ").as_str().into());
                 }
             }
-
-            if errors.len() > 0 {
-                return Err(errors.join(", ").as_str().into());
+        } else {
+            // Cleanup original file
+            let upload_dir = data.upload_dir.clone();
+            let source_file = upload_dir.join(ORIGINAL_PATH).join(&file.filename);
+            if let Err(err) = std::fs::remove_file(&source_file) {
+                return Err(format!("Unable to remove file after upload: {}", err).into());
             }
         }
     } else {
-        // Cleanup original file
+        // Full data not available, just cleanup the original
         let upload_dir = data.upload_dir.clone();
-        let source_file = upload_dir.join(ORIGINAL_PATH).join(&file.filename);
+        let source_file = upload_dir.join(ORIGINAL_PATH).join(&data.filename);
         if let Err(err) = std::fs::remove_file(&source_file) {
             return Err(format!("Unable to remove file after upload: {}", err).into());
         }
@@ -382,6 +424,9 @@ fn init_file(dir: &Dir, data: &FilePayload) -> Result<FileDto> {
     let content_type = get_content_type(&data.path)?;
     if content_type.starts_with("image/") {
         if !ALLOWED_IMAGE_TYPES.contains(&content_type.as_str()) {
+            if let Err(e) = cleanup_temp_uploads(data, None) {
+                error!("Cleanup orig file: {}", e);
+            }
             return Err("Uploaded image type not allowed".into());
         }
         is_image = true;
