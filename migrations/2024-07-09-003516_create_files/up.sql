@@ -13,5 +13,5 @@ CREATE TABLE files (
     FOREIGN KEY (dir_id) REFERENCES files(id)
 );
 CREATE INDEX files_dir_id_idx ON files(dir_id);
-CREATE INDEX files_dir_id_name_idx ON files(dir_id, name);
+CREATE UNIQUE INDEX files_dir_id_name_idx ON files(dir_id, name);
 CREATE INDEX files_dir_id_created_at_idx ON files(dir_id, created_at);
