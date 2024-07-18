@@ -15,7 +15,7 @@ Simple file storage service written in Rust
 - [x] Buckets management via CLI
 - [x] Role based authorization
 - [x] Directories CRUD
-- [ ] Files upload/delete
+- [x] Files upload/delete
 
 ## Workflow
 
@@ -51,11 +51,10 @@ Simple file storage service written in Rust
 Acquire auth tokens:
 - Send login request to auth endpoint
 - Return access token
-- Note: Just use a hardcoded username and password
 
 ### Clients
 
-Clients are the tenants or customers of the service. They are assigned with an ID.
+Clients are the tenants or customers of the service.
 
 Each client has access to the following resources:
 - teams
