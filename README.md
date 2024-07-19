@@ -303,7 +303,7 @@ Environment="GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json"
 WorkingDirectory=/data/www/html/sites/files-rs/
 ExecStart=/data/www/html/sites/files-rs/target/release/files-rs
 Restart=on-failure
-RestartSec=10s
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
