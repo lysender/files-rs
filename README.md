@@ -52,6 +52,14 @@ Acquire auth tokens:
 - Send login request to auth endpoint
 - Return access token
 
+## Google Cloud Service Account
+
+Create a Google Cloud Service Account with the following roles:
+- Storage Folder Admin
+- Storage HMAC Key Admin
+- Storage Insights Collector Service
+- Storage Object Admin
+
 ### Clients
 
 Clients are the tenants or customers of the service.
