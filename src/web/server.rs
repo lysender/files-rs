@@ -1,4 +1,5 @@
 use std::process;
+use std::sync::Arc;
 
 use axum::extract::FromRef;
 use axum::Router;
@@ -15,7 +16,7 @@ use crate::Result;
 
 #[derive(Clone, FromRef)]
 pub struct AppState {
-    pub config: Config,
+    pub config: Arc<Config>,
     pub db_pool: Pool,
 }
 
@@ -29,7 +30,7 @@ pub async fn run_web_server() -> Result<()> {
 
     let pool = create_db_pool();
     let state = AppState {
-        config,
+        config: Arc::new(config),
         db_pool: pool,
     };
 
