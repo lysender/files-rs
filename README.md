@@ -1,64 +1,41 @@
 # files-rs: Personal file storage API
 
-files-rs is a simple file storage service written in Rust.
+`files-rs` is a simple file storage service, written in Rust btw.
 
 It is designed for personal use and not indended for large number of concurrent users.
 The goal of the service is to provide an economical way to store and retrieve
 files in the cloud at the cost of writing your own client/frontend.
 
 Common uses cases:
-- Online photo album
 - Store personal files and documents
+- Online photo album
 
-## Objectives
+## Features 
 
-- [x] Serves JSON API endpoints to manage files
-- [x] Multi-tenant support
-- [x] Multi-bucket support
-- [x] Supports Google Cloud Storage for now
-- [x] SQLite for database
-- [x] Simple JWT authentication
-- [x] Tenanats/clients management via CLI
-- [x] Teams/users management via CLI
-- [x] Buckets management via CLI
+- [x] JSON API endpoints to manage files
+- [x] Multi-tenant
+- [x] Multi-bucket
+- [x] Google Cloud Storage
+- [x] SQLite database
+- [x] JWT authentication
 - [x] Role based authorization
-- [x] Directories CRUD
-- [x] Files upload/delete
+- [x] Tenants/clients management via CLI
+- [x] Users management via CLI
+- [x] Buckets management via CLI
 
 ## Workflow
 
-- Tenants or clients are assigned with an ID
-- Each API request are authenticated against a client 
-- A client can have multiple buckets
-- Each bucket can have multiple container directories
-- Each directory can have the following directories:
-  - Contents - original contents
-  - Versions
-    - Thumbnails
-    - Large
-    - Etc
-- Contents can be any files supported
-- Clients may organize their files like a regular storage or an online photo album
-- All files must be uploaded through the application, either online or though cli
-- Collects mime type, size and image dimentions
-
-### Directory Structure
-
-```
-- Bucket
-  - Directory
-    - Contents
-    - Versions
-      - Thumbnails
-      - Large
-      - Etc
-```
-
-## Authentication
-
-Acquire auth tokens:
-- Send login request to auth endpoint
-- Return access token
+- Tenants/clients are like organizations
+- Each client have users and cloud storage buckets
+- Files are organized in directories under a bucket
+- Each directory have the following sub-directories:
+  - orig - original file
+  - preview - web optimized image preview
+  - thumb - web optimized image thumbnail
+- File metadata is collected
+  - Content type
+  - Size
+  - Image dimension for each version
 
 ## Google Cloud Service Account
 
@@ -68,7 +45,7 @@ Create a Google Cloud Service Account with the following roles:
 - Storage Insights Collector Service
 - Storage Object Admin
 
-### Clients
+## Clients
 
 Clients are the tenants or customers of the service.
 
@@ -95,10 +72,10 @@ Client:
 - status: active, inactive
 - created_at
 
-### Teams/Users
+## Users
 
-Each clients are provided with a team, which are users able to access the client resources.
-Teams are managed via CLI only as well.
+Each clients can have users with roles the define the permissions to access client resources.
+Users are managed via CLI only as well.
 
 ```bash
 ./files-rs users list client_id
@@ -179,8 +156,9 @@ Summary: Viewers can only view directories and files
 ## Buckets
 
 Buckets are created outside of the application, like in Google Console or using gsutil.
-
 They are added into the client resources via the CLI.
+
+When adding a bucket, make sure it already exists in the cloud storage.
 
 ```bash
 ./files-rs buckets list client_id
@@ -188,28 +166,13 @@ They are added into the client resources via the CLI.
 ./files-rs buckets delete bucket_id
 ```
 
-### Setup Admin User
-
-Run the following:
-
-```bash
-./files-rs generate-login
-```
-
-Verifying authenticated requests:
-- Send Authorization header with the following data:
-  - Subject -> client_id
-  - Scope -> auth files
-  - Expires
-- Validate authorization header using a middleware
-- Attach client info as request extension
-
 ## Models
 
 Bucket:
 - id
 - client_id
 - name
+- images_only
 - created_at
 
 Dir:
@@ -248,6 +211,9 @@ File:
 - PATCH /v1/buckets/:bucket_id/dirs/:dir_id
 - DELETE /v1/buckets/:bucket_id/dirs/:dir_id
 - GET /v1/buckets/:bucket_id/dirs/:dir_id/files
+- POST /v1/buckets/:bucket_id/dirs/:dir_id/files
+- GET /v1/buckets/:bucket_id/dirs/:dir_id/files/:file_id
+- DELETE /v1/buckets/:bucket_id/dirs/:dir_id/files/:file_id
 
 ## Database client setup
 
