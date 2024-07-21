@@ -199,21 +199,23 @@ File:
 
 ## API Endpoints
 
-- GET /v1/auth/token
-- GET /v1/buckets
-- POST /v1/buckets?page=1&per_page=10
-- GET /v1/buckets/:bucket_id
-- PATCH /v1/buckets/:bucket_id
-- DELETE /v1/buckets/:bucket_id
-- GET /v1/buckets/:bucket_id/dirs?page=1&per_page=10
-- POST /v1/buckets/:bucket_id/dirs
-- GET /v1/buckets/:bucket_id/dirs/:dir_id
-- PATCH /v1/buckets/:bucket_id/dirs/:dir_id
-- DELETE /v1/buckets/:bucket_id/dirs/:dir_id
-- GET /v1/buckets/:bucket_id/dirs/:dir_id/files
-- POST /v1/buckets/:bucket_id/dirs/:dir_id/files
-- GET /v1/buckets/:bucket_id/dirs/:dir_id/files/:file_id
-- DELETE /v1/buckets/:bucket_id/dirs/:dir_id/files/:file_id
+```
+GET /v1/auth/token
+GET /v1/buckets
+POST /v1/buckets
+GET /v1/buckets/:bucket_id
+PATCH /v1/buckets/:bucket_id
+DELETE /v1/buckets/:bucket_id
+GET /v1/buckets/:bucket_id/dirs?page=1&per_page=10&keyword=
+POST /v1/buckets/:bucket_id/dirs
+GET /v1/buckets/:bucket_id/dirs/:dir_id
+PATCH /v1/buckets/:bucket_id/dirs/:dir_id
+DELETE /v1/buckets/:bucket_id/dirs/:dir_id
+GET /v1/buckets/:bucket_id/dirs/:dir_id/files?page=1&per_page=10&keyword=
+POST /v1/buckets/:bucket_id/dirs/:dir_id/files
+GET /v1/buckets/:bucket_id/dirs/:dir_id/files/:file_id
+DELETE /v1/buckets/:bucket_id/dirs/:dir_id/files/:file_id
+```
 
 ## Database client setup
 
