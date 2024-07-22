@@ -24,6 +24,7 @@ pub struct FileObject {
     pub size: i64,
     pub is_image: i32,
     pub img_versions: Option<String>,
+    pub img_taken_at: Option<i64>,
     pub created_at: i64,
     pub updated_at: i64,
 }
@@ -44,6 +45,7 @@ pub struct FileDto {
 
     // Only available for image files, main url is in orig version
     pub img_versions: Option<Vec<ImgVersionDto>>,
+    pub img_taken_at: Option<i64>,
 
     pub created_at: i64,
     pub updated_at: i64,

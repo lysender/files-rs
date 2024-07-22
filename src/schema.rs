@@ -44,6 +44,7 @@ diesel::table! {
         img_versions -> Nullable<Text>,
         created_at -> BigInt,
         updated_at -> BigInt,
+        img_taken_at -> Nullable<BigInt>,
     }
 }
 
