@@ -18,6 +18,7 @@ use crate::dirs::{update_dir_timestamp, Dir};
 use crate::schema::files::{self, dsl};
 use crate::storage::upload_object;
 use crate::util::generate_id;
+use crate::util::truncate_string;
 use crate::validators::flatten_errors;
 use crate::web::pagination::Paginated;
 use crate::{Error, Result};
@@ -242,9 +243,13 @@ pub async fn create_file(
         if let Err(e) = cleanup_temp_uploads(data, None) {
             error!("Cleanup orig file: {}", e);
         }
-        return Err(Error::ValidationError(
-            "File with the same name already exists".to_string(),
-        ));
+
+        // Show error but ensure name is not too long
+        let short_name = truncate_string(&data.name, 20);
+        return Err(Error::ValidationError(format!(
+            "{} already exists",
+            short_name,
+        )));
     }
 
     if file_dto.is_image {

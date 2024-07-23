@@ -75,16 +75,19 @@ mod tests {
     fn test_new_bucket() {
         let data = NewBucket {
             name: "hello-world".to_string(),
+            images_only: false,
         };
         assert!(data.validate().is_ok());
 
         let data = NewBucket {
             name: "hello_world".to_string(),
+            images_only: false,
         };
         assert!(data.validate().is_err());
 
         let data = NewBucket {
             name: "".to_string(),
+            images_only: false,
         };
         assert!(data.validate().is_err());
     }
