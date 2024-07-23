@@ -60,6 +60,21 @@ pub struct FilePayload {
     pub size: i64,
 }
 
+#[derive(Debug, Clone)]
+pub struct PhotoExif {
+    pub orientation: u32,
+    pub img_taken_at: Option<i64>,
+}
+
+impl Default for PhotoExif {
+    fn default() -> Self {
+        Self {
+            orientation: 1,
+            img_taken_at: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Validate)]
 pub struct ListFilesParams {
     #[validate(range(min = 1, max = 1000))]
@@ -97,13 +112,14 @@ impl From<FileDto> for FileObject {
             size: file.size,
             is_image: if file.is_image { 1 } else { 0 },
             img_versions,
+            img_taken_at: file.img_taken_at,
             created_at: file.created_at,
             updated_at: file.updated_at,
         }
     }
 }
 
-/// Convert File to FileDtox
+/// Convert File to FileDto
 impl From<FileObject> for FileDto {
     fn from(file: FileObject) -> Self {
         let img_versions = match file.img_versions {
@@ -131,6 +147,7 @@ impl From<FileObject> for FileDto {
             size: file.size,
             is_image: file.is_image == 1,
             img_versions,
+            img_taken_at: file.img_taken_at,
             url: None,
             created_at: file.created_at,
             updated_at: file.updated_at,

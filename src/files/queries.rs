@@ -1,8 +1,9 @@
+use chrono::{DateTime, NaiveDateTime};
 use deadpool_diesel::sqlite::Pool;
 use exif::{In, Tag};
 use image::imageops;
 use image::io::Reader as ImageReader;
-use std::fs::File as FsFile;
+use std::fs::File;
 use std::path::PathBuf;
 
 use diesel::dsl::count_star;
@@ -23,7 +24,8 @@ use crate::{Error, Result};
 
 use super::{
     FileDto, FileObject, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ListFilesParams,
-    ALLOWED_IMAGE_TYPES, MAX_DIMENSION, MAX_PREVIEW_DIMENSION, MAX_THUMB_DIMENSION, ORIGINAL_PATH,
+    PhotoExif, ALLOWED_IMAGE_TYPES, MAX_DIMENSION, MAX_PREVIEW_DIMENSION, MAX_THUMB_DIMENSION,
+    ORIGINAL_PATH,
 };
 
 const MAX_PER_PAGE: i32 = 50;
@@ -246,7 +248,16 @@ pub async fn create_file(
     }
 
     if file_dto.is_image {
-        match create_versions(data) {
+        let exif_info = match parse_exif_info(&data.path) {
+            Ok(info) => info,
+            Err(e) => {
+                error!("Unable to parse exif into: {}", e);
+                // It's okay to continue without exif info
+                PhotoExif::default()
+            }
+        };
+
+        match create_versions(data, &exif_info) {
             Ok(versions) => {
                 if versions.len() > 0 {
                     file_dto.img_versions = Some(versions);
@@ -259,6 +270,8 @@ pub async fn create_file(
                 return Err(e);
             }
         };
+
+        file_dto.img_taken_at = exif_info.img_taken_at;
     }
 
     if let Err(upload_err) = upload_object(bucket, dir, &data.upload_dir, &file_dto).await {
@@ -445,6 +458,7 @@ fn init_file(dir: &Dir, data: &FilePayload) -> Result<FileDto> {
         url: None,
         is_image,
         img_versions: None,
+        img_taken_at: None,
         created_at: today,
         updated_at: today,
     };
@@ -477,15 +491,16 @@ fn read_image(path: &PathBuf) -> Result<DynamicImage> {
     }
 }
 
-fn create_versions(data: &FilePayload) -> Result<Vec<ImgVersionDto>> {
-    let orientation = parse_exif_orientation(&data.path).unwrap_or(1);
+fn create_versions(data: &FilePayload, exif_info: &PhotoExif) -> Result<Vec<ImgVersionDto>> {
     let img = read_image(&data.path)?;
 
+    println!("exif_info: {:?}", exif_info);
+
     // Rotate based on exif orientation before creating versions
-    let rotated_img = match orientation {
+    let rotated_img = match exif_info.orientation {
         8 => img.rotate90(),
-        3 => img.rotate180(),
         6 => img.rotate90(),
+        3 => img.rotate180(),
         _ => img,
     };
 
@@ -610,19 +625,19 @@ fn get_content_type(path: &PathBuf) -> Result<String> {
     }
 }
 
-fn parse_exif_orientation(path: &PathBuf) -> Result<u32> {
-    let Ok(file) = FsFile::open(path) else {
-        return Err("Unable to open file".into());
+fn parse_exif_info(path: &PathBuf) -> Result<PhotoExif> {
+    let Ok(file) = File::open(path) else {
+        return Err("Unable to open file to read exif into".into());
     };
 
     let mut buf_reader = std::io::BufReader::new(&file);
     let exit_reader = exif::Reader::new();
     let Ok(exif) = exit_reader.read_from_container(&mut buf_reader) else {
-        return Err("Unable to read exif data".into());
+        return Err("Unable to read exif info from file".into());
     };
 
     // Default to 1 if cannot identify orientation
-    let result = match exif.get_field(Tag::Orientation, In::PRIMARY) {
+    let orientation = match exif.get_field(Tag::Orientation, In::PRIMARY) {
         Some(orientation) => match orientation.value.get_uint(0) {
             Some(v @ 1..=8) => v,
             _ => 1,
@@ -630,5 +645,32 @@ fn parse_exif_orientation(path: &PathBuf) -> Result<u32> {
         None => 1,
     };
 
-    Ok(result)
+    let mut taken_at: Option<i64> = None;
+
+    if let Some(date_time) = exif.get_field(Tag::DateTimeOriginal, In::PRIMARY) {
+        let naive_str = date_time.display_value().to_string();
+
+        if let Some(offset_field) = exif.get_field(Tag::OffsetTimeOriginal, In::PRIMARY) {
+            // For some reason, it is wrapped in quotes
+            let offset_str = offset_field.display_value().to_string().replace("\"", "");
+
+            // Combine datetime and offset to build the actual time
+            let date_str = format!("{} {}", naive_str, offset_str);
+            if let Ok(dt) = DateTime::parse_from_str(&date_str, "%Y-%m-%d %H:%M:%S %z") {
+                taken_at = Some(dt.timestamp());
+            }
+        } else {
+            // No timezone info so we will just incorrectly assume its UTC
+            // I want it Philippine time but hey, someone else on the other side
+            // of the world may use this right?
+            if let Ok(dt) = NaiveDateTime::parse_from_str(&naive_str, "%Y-%m-%d %H:%M:%S") {
+                taken_at = Some(dt.and_utc().timestamp());
+            }
+        }
+    }
+
+    Ok(PhotoExif {
+        orientation,
+        img_taken_at: taken_at,
+    })
 }

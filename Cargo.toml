@@ -14,7 +14,7 @@ derive_more = { version = "0.99.18", features = ["from"] }
 diesel = { version = "2.2.1", features = ["sqlite"] }
 dotenvy = "0.15.7"
 google-cloud-storage = "0.18.0"
-image = "0.25.1"
+image = "0.25.2"
 infer = "0.16.0"
 jsonwebtoken = "9.3.0"
 kamadak-exif = "0.5.5"
