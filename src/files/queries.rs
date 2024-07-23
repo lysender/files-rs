@@ -502,6 +502,7 @@ fn create_versions(data: &FilePayload, exif_info: &PhotoExif) -> Result<Vec<ImgV
         6 => img.rotate90(),
         4 => img.flipv(),
         3 => img.rotate180(),
+        2 => img.fliph(),
         _ => img,
     };
 
