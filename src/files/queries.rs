@@ -494,12 +494,12 @@ fn read_image(path: &PathBuf) -> Result<DynamicImage> {
 fn create_versions(data: &FilePayload, exif_info: &PhotoExif) -> Result<Vec<ImgVersionDto>> {
     let img = read_image(&data.path)?;
 
-    println!("exif_info: {:?}", exif_info);
-
     // Rotate based on exif orientation before creating versions
     let rotated_img = match exif_info.orientation {
-        8 => img.rotate90(),
+        8 => img.rotate270(),
+        7 => img.rotate270().fliph(),
         6 => img.rotate90(),
+        5 => img.rotate90().fliph(),
         4 => img.flipv(),
         3 => img.rotate180(),
         2 => img.fliph(),
