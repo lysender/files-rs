@@ -2,7 +2,7 @@ use chrono::{DateTime, NaiveDateTime};
 use deadpool_diesel::sqlite::Pool;
 use exif::{In, Tag};
 use image::imageops;
-use image::io::Reader as ImageReader;
+use image::ImageReader;
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -500,6 +500,7 @@ fn create_versions(data: &FilePayload, exif_info: &PhotoExif) -> Result<Vec<ImgV
     let rotated_img = match exif_info.orientation {
         8 => img.rotate90(),
         6 => img.rotate90(),
+        4 => img.flipv(),
         3 => img.rotate180(),
         _ => img,
     };
