@@ -4,9 +4,11 @@
 
 It is designed for personal use and not indended for large number of concurrent users.
 The goal of the service is to provide an economical way to store and retrieve
-files in the cloud at the cost of writing your own client/frontend.
+files in the cloud.
 
-Common uses cases:
+See [memo-rs](https://github.com/lysender/memo-rs) to deploy a frontend for this service.
+
+Uses cases:
 - Store personal files and documents
 - Online photo album
 
@@ -262,7 +264,7 @@ File: `/etc/systemd/system/files-rs.service`
 
 ```
 [Unit]
-Description=files-rs File Management in the cloud
+Description=files-rs Personal file storage API
 
 [Service]
 User=www-data
