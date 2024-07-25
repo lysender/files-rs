@@ -6,7 +6,7 @@ use tracing::error;
 use crate::{
     buckets::test_read_bucket,
     config::{GOOGLE_PROJECT_ID, JWT_SECRET},
-    storage::test_list_buckets,
+    storage::test_list_hmac_keys,
     Result,
 };
 
@@ -54,7 +54,7 @@ async fn check_cloud_storage() -> Result<String> {
         return Ok("DOWN".to_string());
     };
 
-    match test_list_buckets(&project_id).await {
+    match test_list_hmac_keys(&project_id).await {
         Ok(_) => Ok("UP".to_string()),
         Err(e) => {
             let msg = format!("{}", e);
