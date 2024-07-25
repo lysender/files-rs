@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use google_cloud_storage::client::{Client, ClientConfig};
 use google_cloud_storage::http::buckets::get::GetBucketRequest;
-use google_cloud_storage::http::buckets::list::ListBucketsRequest;
+use google_cloud_storage::http::hmac_keys::list::ListHmacKeysRequest;
 use google_cloud_storage::http::objects::delete::DeleteObjectRequest;
 use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
 use google_cloud_storage::http::Error as CloudError;
@@ -321,16 +321,15 @@ async fn generate_url(client: &Client, bucket_name: &str, file_path: &str) -> Re
     }
 }
 
-pub async fn test_list_buckets(project_id: &str) -> Result<()> {
+pub async fn test_list_hmac_keys(project_id: &str) -> Result<()> {
     let Ok(config) = ClientConfig::default().with_auth().await else {
         return Err("Failed to initialize storage client configuration.".into());
     };
     let client = Client::new(config);
 
     let res = client
-        .list_buckets(&ListBucketsRequest {
-            project: project_id.to_string(),
-            max_results: Some(1),
+        .list_hmac_keys(&ListHmacKeysRequest {
+            project_id: project_id.to_string(),
             ..Default::default()
         })
         .await;
