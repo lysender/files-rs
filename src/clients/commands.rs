@@ -21,8 +21,8 @@ async fn run_list_clients() -> Result<()> {
     let clients = list_clients(&db_pool).await?;
     for client in clients.iter() {
         println!(
-            "ID: {}, Name: {}, Status: {}",
-            client.id, client.name, client.status
+            "{{ id = {}, name = {}, status = {}, default_bucket = {} }}",
+            client.id, client.name, client.status, "None"
         );
     }
     Ok(())
@@ -32,7 +32,7 @@ async fn run_create_client(name: String) -> Result<()> {
     let db_pool = create_db_pool();
     let new_client = NewClient { name };
     let client = create_client(&db_pool, &new_client).await?;
-    println!("ID: {}, Name: {}", client.id, client.name);
+    println!("{{ id = {}, name = {} }}", client.id, client.name);
     println!("Created client.");
     Ok(())
 }
