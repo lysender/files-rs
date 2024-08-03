@@ -8,6 +8,7 @@ use validator::Validate;
 pub struct Client {
     pub id: String,
     pub name: String,
+    pub default_bucket_id: Option<String>,
     pub status: String,
     pub created_at: i64,
 }

@@ -16,6 +16,7 @@ diesel::table! {
         name -> Text,
         status -> Text,
         created_at -> BigInt,
+        default_bucket_id -> Nullable<Text>,
     }
 }
 
