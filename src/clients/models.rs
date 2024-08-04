@@ -19,3 +19,10 @@ pub struct NewClient {
     #[validate(custom(function = "crate::validators::anyname"))]
     pub name: String,
 }
+
+#[derive(Debug, Clone, Deserialize, AsChangeset)]
+#[diesel(table_name = crate::schema::clients)]
+pub struct UpdateClientBucket {
+    #[diesel(treat_none_as_null = true)]
+    pub default_bucket_id: Option<String>,
+}

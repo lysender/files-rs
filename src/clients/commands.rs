@@ -1,4 +1,7 @@
-use crate::clients::{delete_client, get_client, list_clients, update_client_status};
+use crate::clients::{
+    delete_client, get_client, list_clients, set_client_default_bucket,
+    unset_client_default_bucket, update_client_status,
+};
 use crate::config::ClientCommand;
 
 use crate::db::create_db_pool;
@@ -13,6 +16,10 @@ pub async fn run_client_command(cmd: ClientCommand) -> Result<()> {
         ClientCommand::Enable { id } => run_enable_client(id).await,
         ClientCommand::Disable { id } => run_disable_client(id).await,
         ClientCommand::Delete { id } => run_delete_client(id).await,
+        ClientCommand::SetDefaultBucket { id, bucket_id } => {
+            run_set_default_bucket(id, bucket_id).await
+        }
+        ClientCommand::UnsetDefaultBucket { id } => run_unset_default_bucket(id).await,
     }
 }
 
@@ -21,7 +28,7 @@ async fn run_list_clients() -> Result<()> {
     let clients = list_clients(&db_pool).await?;
     for client in clients.iter() {
         println!(
-            "{{ id = {}, name = {}, status = {}, default_bucket = {} }}",
+            "{{ id = {}, name = {}, status = {}, default_bucket_id = {} }}",
             client.id, client.name, client.status, "None"
         );
     }
@@ -77,6 +84,35 @@ async fn run_delete_client(id: String) -> Result<()> {
     if let Some(_) = client {
         let _ = delete_client(&db_pool, &id).await?;
         println!("Client deleted.");
+    } else {
+        println!("Client not found.");
+    }
+    Ok(())
+}
+
+async fn run_set_default_bucket(id: String, bucket_id: String) -> Result<()> {
+    let db_pool = create_db_pool();
+    let client = get_client(&db_pool, &id).await?;
+    if let Some(_) = client {
+        let _ = set_client_default_bucket(&db_pool, &id, &bucket_id).await?;
+        println!("Client enabled.");
+    } else {
+        println!("Client not found.");
+    }
+    Ok(())
+}
+
+async fn run_unset_default_bucket(id: String) -> Result<()> {
+    let db_pool = create_db_pool();
+    let client = get_client(&db_pool, &id).await?;
+    if let Some(node) = client {
+        if node.default_bucket_id.is_none() {
+            println!("Client do not have a default bucket.");
+            return Ok(());
+        }
+
+        let _ = unset_client_default_bucket(&db_pool, &id).await?;
+        println!("Client enabled.");
     } else {
         println!("Client not found.");
     }
