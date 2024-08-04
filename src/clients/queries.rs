@@ -269,7 +269,7 @@ pub async fn set_client_default_bucket(db_pool: &Pool, id: &str, bucket_id: &str
     };
 
     // Ensure that bucket exists and is owned by the client
-    let bucket = get_bucket(db_pool, id).await?;
+    let bucket = get_bucket(db_pool, bucket_id).await?;
     let Some(bucket) = bucket else {
         return Err(Error::ValidationError("Bucket not found".to_string()));
     };

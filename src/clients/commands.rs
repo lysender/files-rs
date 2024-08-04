@@ -29,7 +29,13 @@ async fn run_list_clients() -> Result<()> {
     for client in clients.iter() {
         println!(
             "{{ id = {}, name = {}, status = {}, default_bucket_id = {} }}",
-            client.id, client.name, client.status, "None"
+            client.id,
+            client.name,
+            client.status,
+            client
+                .default_bucket_id
+                .clone()
+                .unwrap_or("None".to_string())
         );
     }
     Ok(())
@@ -95,7 +101,7 @@ async fn run_set_default_bucket(id: String, bucket_id: String) -> Result<()> {
     let client = get_client(&db_pool, &id).await?;
     if let Some(_) = client {
         let _ = set_client_default_bucket(&db_pool, &id, &bucket_id).await?;
-        println!("Client enabled.");
+        println!("Client default bucket set.");
     } else {
         println!("Client not found.");
     }
@@ -112,7 +118,7 @@ async fn run_unset_default_bucket(id: String) -> Result<()> {
         }
 
         let _ = unset_client_default_bucket(&db_pool, &id).await?;
-        println!("Client enabled.");
+        println!("Client default bucket unset.");
     } else {
         println!("Client not found.");
     }
