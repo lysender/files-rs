@@ -9,6 +9,7 @@ use crate::{Error, Result};
 struct Claims {
     sub: String,
     cid: String,
+    bid: Option<String>,
     scope: String,
     exp: usize,
 }
@@ -18,11 +19,13 @@ const EXP_DURATION: i64 = 60 * 60 * 24 * 7; // 1 week
 
 pub fn create_auth_token(actor: &ActorPayload, secret: &str) -> Result<String> {
     let exp = Utc::now() + Duration::seconds(EXP_DURATION);
+    let data = actor.clone();
 
     let claims = Claims {
-        sub: actor.id.clone(),
-        cid: actor.client_id.clone(),
-        scope: actor.scope.clone(),
+        sub: data.id,
+        cid: data.client_id,
+        bid: data.default_bucket_id,
+        scope: data.scope,
         exp: exp.timestamp() as usize,
     };
 
@@ -56,6 +59,7 @@ pub fn verify_auth_token(token: &str, secret: &str) -> Result<ActorPayload> {
     Ok(ActorPayload {
         id: decoded.claims.sub,
         client_id: decoded.claims.cid,
+        default_bucket_id: decoded.claims.bid,
         scope: decoded.claims.scope,
     })
 }
@@ -70,6 +74,7 @@ mod tests {
         let actor = ActorPayload {
             id: "thor01".to_string(),
             client_id: "client01".to_string(),
+            default_bucket_id: None,
             scope: "auth files".to_string(),
         };
         let token = create_auth_token(&actor, "secret").unwrap();

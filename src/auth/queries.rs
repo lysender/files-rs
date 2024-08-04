@@ -50,6 +50,7 @@ pub async fn authenticate(state: &AppState, credentials: &Credentials) -> Result
     let actor = ActorPayload {
         id: user.id.clone(),
         client_id: client.id.clone(),
+        default_bucket_id: client.default_bucket_id.clone(),
         scope: "auth files".to_string(),
     };
     let token = create_auth_token(&actor, &state.config.jwt_secret)?;
