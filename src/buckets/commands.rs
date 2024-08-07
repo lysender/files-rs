@@ -21,7 +21,10 @@ async fn run_list_buckets(client_id: String) -> Result<()> {
     let db_pool = create_db_pool();
     let buckets = list_buckets(&db_pool, &client_id).await?;
     for bucket in buckets.iter() {
-        println!("ID: {}, Name: {}", bucket.id, bucket.name);
+        println!(
+            "{{ id = {}, name = {}, images_only = {} }}",
+            bucket.id, bucket.name, bucket.images_only
+        );
     }
     Ok(())
 }
@@ -44,7 +47,10 @@ async fn run_create_bucket(client_id: String, name: String, images_only: String)
         images_only: img_only,
     };
     let bucket = create_bucket(&db_pool, &client_id, &data).await?;
-    println!("ID: {}, Name: {}", bucket.id, bucket.name);
+    println!(
+        "{{ id = {}, name = {}, images_only = {} }}",
+        bucket.id, bucket.name, bucket.images_only
+    );
     println!("Created bucket.");
     Ok(())
 }

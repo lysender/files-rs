@@ -128,11 +128,6 @@ pub fn to_error_response(error: Error) -> Response<Body> {
             "Unauthorized".to_string(),
             "Unauthorized".to_string(),
         ),
-        Error::Base64DecodeError(message) => create_error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            message,
-            "Internal Server Error".to_string(),
-        ),
         Error::ConfigError(message) => create_error_response(
             StatusCode::INTERNAL_SERVER_ERROR,
             message,

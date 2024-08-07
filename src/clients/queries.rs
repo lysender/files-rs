@@ -6,13 +6,14 @@ use diesel::{QueryDsl, SelectableHelper};
 use tracing::error;
 use validator::Validate;
 
-use crate::buckets::count_client_buckets;
+use crate::buckets::{count_client_buckets, get_bucket};
 use crate::schema::clients::{self, dsl};
+use crate::users::count_client_users;
 use crate::util::generate_id;
 use crate::validators::flatten_errors;
 use crate::{Error, Result};
 
-use super::{Client, NewClient};
+use super::{Client, NewClient, UpdateClientBucket};
 
 // Can't have too many clients
 const MAX_CLIENTS: i32 = 10;
@@ -77,6 +78,7 @@ pub async fn create_client(db_pool: &Pool, data: &NewClient) -> Result<Client> {
     let client = Client {
         id: generate_id(),
         name: data_copy.name,
+        default_bucket_id: None,
         status: "active".to_string(),
         created_at: today,
     };
@@ -227,12 +229,16 @@ pub async fn delete_client(db_pool: &Pool, id: &str) -> Result<()> {
         return Err("Error getting db connection".into());
     };
 
-    // TODO: Do not delete client if still has users
     let bucket_count = count_client_buckets(db_pool, id).await?;
     if bucket_count > 0 {
         return Err(Error::ValidationError(
             "Client still has buckets".to_string(),
         ));
+    }
+
+    let users_count = count_client_users(db_pool, id).await?;
+    if users_count > 0 {
+        return Err(Error::ValidationError("Client still has users".to_string()));
     }
 
     let id = id.to_string();
@@ -248,6 +254,86 @@ pub async fn delete_client(db_pool: &Pool, id: &str) -> Result<()> {
             Err(e) => {
                 error!("{}", e);
                 Err("Error deleting client".into())
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            Err("Error using the db connection".into())
+        }
+    }
+}
+
+pub async fn set_client_default_bucket(db_pool: &Pool, id: &str, bucket_id: &str) -> Result<bool> {
+    let Ok(db) = db_pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+
+    // Ensure that bucket exists and is owned by the client
+    let bucket = get_bucket(db_pool, bucket_id).await?;
+    let Some(bucket) = bucket else {
+        return Err(Error::ValidationError("Bucket not found".to_string()));
+    };
+
+    if bucket.client_id.as_str() != id {
+        return Err(Error::ValidationError(
+            "Bucket not owned by client".to_string(),
+        ));
+    }
+
+    let id = id.to_string();
+    let bucket_id = bucket_id.to_string();
+    let data = UpdateClientBucket {
+        default_bucket_id: Some(bucket_id),
+    };
+
+    let conn_result = db
+        .interact(move |conn| {
+            diesel::update(dsl::clients)
+                .filter(dsl::id.eq(id.as_str()))
+                .set(data)
+                .execute(conn)
+        })
+        .await;
+
+    match conn_result {
+        Ok(update_res) => match update_res {
+            Ok(item) => Ok(item > 0),
+            Err(e) => {
+                error!("{}", e);
+                Err("Error updating client".into())
+            }
+        },
+        Err(e) => {
+            error!("{}", e);
+            Err("Error using the db connection".into())
+        }
+    }
+}
+
+pub async fn unset_client_default_bucket(db_pool: &Pool, id: &str) -> Result<bool> {
+    let Ok(db) = db_pool.get().await else {
+        return Err("Error getting db connection".into());
+    };
+
+    let id = id.to_string();
+    let data = UpdateClientBucket {
+        default_bucket_id: None,
+    };
+    let conn_result = db
+        .interact(move |conn| {
+            diesel::update(dsl::clients)
+                .filter(dsl::id.eq(id.as_str()))
+                .set(data)
+                .execute(conn)
+        })
+        .await;
+
+    match conn_result {
+        Ok(update_res) => match update_res {
+            Ok(item) => Ok(item > 0),
+            Err(e) => {
+                error!("{}", e);
+                Err("Error updating client".into())
             }
         },
         Err(e) => {

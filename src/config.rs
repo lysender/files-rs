@@ -112,6 +112,8 @@ pub enum ClientCommand {
     Enable { id: String },
     Disable { id: String },
     Delete { id: String },
+    SetDefaultBucket { id: String, bucket_id: String },
+    UnsetDefaultBucket { id: String },
 }
 
 #[derive(Subcommand, Debug)]

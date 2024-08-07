@@ -26,7 +26,7 @@ async fn run_list_users(client_id: String) -> Result<()> {
     let users = list_users(&db_pool, &client_id).await?;
     for user in users.iter() {
         println!(
-            "ID: {}, Username: {}, Roles: {}, Status: {}",
+            "{{ id = {}, username = {}, roles = {}, status = {} }}",
             user.id, user.username, user.roles, user.status
         );
     }
@@ -47,7 +47,10 @@ async fn run_create_user(client_id: String, username: String, roles: String) -> 
 
     let db_pool = create_db_pool();
     let user = create_user(&db_pool, &client_id, &new_user).await?;
-    println!("ID: {}, Username: {}", user.id, user.username);
+    println!(
+        "{{ id = {}, username = {} status = {} }}",
+        user.id, user.username, user.status
+    );
     println!("Created user.");
     Ok(())
 }

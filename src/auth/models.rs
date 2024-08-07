@@ -10,6 +10,7 @@ use crate::{
 pub struct ActorPayload {
     pub id: String,
     pub client_id: String,
+    pub default_bucket_id: Option<String>,
     pub scope: String,
 }
 
@@ -17,6 +18,7 @@ pub struct ActorPayload {
 pub struct Actor {
     pub id: String,
     pub client_id: String,
+    pub default_bucket_id: Option<String>,
     pub scope: String,
     pub user: UserDto,
     pub roles: Vec<Role>,
@@ -37,6 +39,7 @@ impl Actor {
         Actor {
             id: user.id.clone(),
             client_id: payload.client_id,
+            default_bucket_id: payload.default_bucket_id,
             scope: payload.scope,
             user,
             roles,
@@ -65,9 +68,6 @@ impl Actor {
 
 #[derive(Deserialize, Serialize, Validate)]
 pub struct Credentials {
-    #[validate(length(equal = 32))]
-    pub client_id: String,
-
     #[validate(length(min = 1, max = 30))]
     pub username: String,
 
