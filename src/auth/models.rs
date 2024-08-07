@@ -68,9 +68,6 @@ impl Actor {
 
 #[derive(Deserialize, Serialize, Validate)]
 pub struct Credentials {
-    #[validate(length(equal = 32))]
-    pub client_id: String,
-
     #[validate(length(min = 1, max = 30))]
     pub username: String,
 
