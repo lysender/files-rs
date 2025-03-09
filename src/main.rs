@@ -1,5 +1,5 @@
 use clap::Parser;
-use config::{CliArgs, RUST_LOG};
+use config::CliArgs;
 use run::run_command;
 use std::process;
 
@@ -26,11 +26,6 @@ pub use self::error::{Error, Result};
 
 #[tokio::main]
 async fn main() {
-    // Set the RUST_LOG, if it hasn't been explicitly defined
-    if std::env::var(RUST_LOG).is_err() {
-        std::env::set_var(RUST_LOG, "files_rs=info")
-    }
-
     tracing_subscriber::fmt()
         .with_target(false)
         .compact()
