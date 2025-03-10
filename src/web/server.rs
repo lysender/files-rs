@@ -1,4 +1,3 @@
-use std::process;
 use std::sync::Arc;
 
 use axum::Router;
@@ -20,17 +19,12 @@ pub struct AppState {
     pub db_pool: Pool,
 }
 
-pub async fn run_web_server() -> Result<()> {
-    let config = Config::build().unwrap_or_else(|err| {
-        eprintln!("{err}");
-        process::exit(1);
-    });
-
+pub async fn run_web_server(config: &Config) -> Result<()> {
     let port = config.server.port;
 
-    let pool = create_db_pool();
+    let pool = create_db_pool(config.db.url.as_str());
     let state = AppState {
-        config: Arc::new(config),
+        config: Arc::new(config.clone()),
         db_pool: pool,
     };
 
