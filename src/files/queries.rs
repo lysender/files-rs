@@ -1,6 +1,7 @@
 use chrono::{DateTime, NaiveDateTime};
 use deadpool_diesel::sqlite::Pool;
 use exif::{In, Tag};
+use google_cloud_storage::client::Client;
 use image::ImageReader;
 use image::imageops;
 use std::fs::File;
@@ -210,6 +211,7 @@ pub async fn count_dir_files(db_pool: &Pool, dir_id: &str) -> Result<i64> {
 
 pub async fn create_file(
     db_pool: &Pool,
+    storage_client: &Client,
     bucket: &BucketDto,
     dir: &Dir,
     data: &FilePayload,
@@ -279,7 +281,9 @@ pub async fn create_file(
         file_dto.img_taken_at = exif_info.img_taken_at;
     }
 
-    if let Err(upload_err) = upload_object(bucket, dir, &data.upload_dir, &file_dto).await {
+    if let Err(upload_err) =
+        upload_object(storage_client, bucket, dir, &data.upload_dir, &file_dto).await
+    {
         if let Err(e) = cleanup_temp_uploads(data, Some(&file_dto)) {
             error!("Cleanup file(s): {}", e);
         }

@@ -37,10 +37,11 @@ pub async fn list_files_handler(
     //    return Err(Error::BadRequest("Invalid query parameters".to_string()));
     //};
     let files = list_files(&state.db_pool, &dir, &query).await?;
+    let storage_client = state.storage_client;
 
     // Generate download urls for each files
     let items: Vec<FileDto> = files.data.into_iter().map(|f| f.into()).collect();
-    let items = format_files(&bucket.name, &dir.name, items).await?;
+    let items = format_files(&storage_client, &bucket.name, &dir.name, items).await?;
     let listing = Paginated::new(
         items,
         files.meta.page,
@@ -117,11 +118,12 @@ pub async fn create_file_handler(
     };
 
     let db_pool = state.db_pool.clone();
-    let res = create_file(&db_pool, &bucket, &dir, &payload).await;
+    let storage_client = state.storage_client;
+    let res = create_file(&db_pool, &storage_client, &bucket, &dir, &payload).await;
     match res {
         Ok(file) => {
             let file_dto: FileDto = file.into();
-            let file_dto = format_file(&bucket.name, &dir.name, file_dto).await?;
+            let file_dto = format_file(&storage_client, &bucket.name, &dir.name, file_dto).await?;
             Ok(JsonResponse::with_status(
                 StatusCode::CREATED,
                 serde_json::to_string(&file_dto).unwrap(),
@@ -132,13 +134,15 @@ pub async fn create_file_handler(
 }
 
 pub async fn get_file_handler(
+    State(state): State<AppState>,
     Extension(bucket): Extension<BucketDto>,
     Extension(dir): Extension<Dir>,
     Extension(file): Extension<FileObject>,
 ) -> Result<JsonResponse> {
+    let storage_client = state.storage_client;
     // Extract dir from the middleware extension
     let file_dto: FileDto = file.clone().into();
-    let file_dto = format_file(&bucket.name, &dir.name, file_dto).await?;
+    let file_dto = format_file(&storage_client, &bucket.name, &dir.name, file_dto).await?;
     Ok(JsonResponse::new(serde_json::to_string(&file_dto).unwrap()))
 }
 
@@ -159,8 +163,9 @@ pub async fn delete_file_handler(
     let _ = delete_file(&db_pool, &file.id).await?;
 
     // Delete file(s) from storage
+    let storage_client = state.storage_client;
     let dto: FileDto = file.into();
-    let _ = delete_file_object(&bucket.name, &dir.name, &dto).await?;
+    let _ = delete_file_object(&storage_client, &bucket.name, &dir.name, &dto).await?;
 
     Ok(JsonResponse::with_status(
         StatusCode::NO_CONTENT,

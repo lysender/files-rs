@@ -2,6 +2,7 @@ use crate::Result;
 use crate::buckets::{NewBucket, create_bucket, delete_bucket};
 use crate::config::{BucketCommand, Config};
 use crate::db::create_db_pool;
+use crate::storage::create_storage_client;
 
 use super::{get_bucket, list_buckets};
 
@@ -36,6 +37,7 @@ async fn run_create_bucket(
     images_only: String,
 ) -> Result<()> {
     let db_pool = create_db_pool(config.db.url.as_str());
+    let storage_client = create_storage_client(config.cloud.credentials.as_str()).await?;
 
     let res: Result<bool> = match images_only.as_str() {
         "true" => Ok(true),
@@ -51,7 +53,7 @@ async fn run_create_bucket(
         name,
         images_only: img_only,
     };
-    let bucket = create_bucket(&db_pool, &client_id, &data).await?;
+    let bucket = create_bucket(&db_pool, &storage_client, &client_id, &data).await?;
     println!(
         "{{ id = {}, name = {}, images_only = {} }}",
         bucket.id, bucket.name, bucket.images_only

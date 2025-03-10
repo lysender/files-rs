@@ -1,7 +1,12 @@
 use deadpool_diesel::sqlite::Pool;
 use tracing::error;
 
-use crate::{Result, buckets::test_read_bucket, config::Config, storage::test_list_hmac_keys};
+use crate::{
+    Result,
+    buckets::test_read_bucket,
+    config::Config,
+    storage::{create_storage_client, test_list_hmac_keys},
+};
 
 use super::{HealthChecks, HealthStatus, LiveStatus};
 
@@ -39,7 +44,8 @@ async fn perform_checks(config: &Config, db_pool: &Pool) -> Result<HealthChecks>
 }
 
 async fn check_cloud_storage(config: &Config) -> Result<String> {
-    match test_list_hmac_keys(config.cloud.project_id.as_str()).await {
+    let client = create_storage_client(config.cloud.credentials.as_str()).await?;
+    match test_list_hmac_keys(&client, config.cloud.project_id.as_str()).await {
         Ok(_) => Ok("UP".to_string()),
         Err(e) => {
             let msg = format!("{}", e);
