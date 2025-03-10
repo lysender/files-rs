@@ -1,4 +1,4 @@
-use axum::{middleware, routing::get, Router};
+use axum::{Router, middleware, routing::get};
 
 use crate::web::files::files_routes;
 use crate::web::{middlewares::dir_middleware, server::AppState};

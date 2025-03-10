@@ -4,10 +4,10 @@ use std::env;
 use tracing::error;
 
 use crate::{
+    Result,
     buckets::test_read_bucket,
     config::{GOOGLE_PROJECT_ID, JWT_SECRET},
     storage::test_list_hmac_keys,
-    Result,
 };
 
 use super::{HealthChecks, HealthStatus, LiveStatus};

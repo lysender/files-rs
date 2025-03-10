@@ -2,11 +2,11 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use google_cloud_storage::client::{Client, ClientConfig};
+use google_cloud_storage::http::Error as CloudError;
 use google_cloud_storage::http::buckets::get::GetBucketRequest;
 use google_cloud_storage::http::hmac_keys::list::ListHmacKeysRequest;
 use google_cloud_storage::http::objects::delete::DeleteObjectRequest;
 use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
-use google_cloud_storage::http::Error as CloudError;
 use google_cloud_storage::sign::SignedURLOptions;
 
 use crate::buckets::BucketDto;

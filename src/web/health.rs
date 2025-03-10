@@ -3,8 +3,8 @@ use axum::{extract::State, http::StatusCode};
 use super::{response::JsonResponse, server::AppState};
 
 use crate::{
-    health::{check_liveness, check_readiness},
     Result,
+    health::{check_liveness, check_readiness},
 };
 
 pub async fn health_live_handler() -> Result<JsonResponse> {

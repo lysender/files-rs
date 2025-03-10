@@ -1,3 +1,4 @@
+use crate::Result;
 use crate::buckets::run_bucket_command;
 use crate::clients::run_client_command;
 use crate::config::CliArgs;
@@ -6,7 +7,6 @@ use crate::db::create_db_pool;
 use crate::health::check_readiness;
 use crate::users::run_user_command;
 use crate::web::server::run_web_server;
-use crate::Result;
 
 pub async fn run_command(args: CliArgs) -> Result<()> {
     match args.command {

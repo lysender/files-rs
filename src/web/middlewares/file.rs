@@ -1,10 +1,10 @@
 use axum::{
+    Extension,
     body::Body,
     extract::{Path, Request, State},
     http::StatusCode,
     middleware::Next,
     response::Response,
-    Extension,
 };
 
 use crate::{

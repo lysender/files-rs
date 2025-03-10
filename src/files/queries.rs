@@ -1,8 +1,8 @@
 use chrono::{DateTime, NaiveDateTime};
 use deadpool_diesel::sqlite::Pool;
 use exif::{In, Tag};
-use image::imageops;
 use image::ImageReader;
+use image::imageops;
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -14,7 +14,7 @@ use tracing::error;
 use validator::Validate;
 
 use crate::buckets::BucketDto;
-use crate::dirs::{update_dir_timestamp, Dir};
+use crate::dirs::{Dir, update_dir_timestamp};
 use crate::schema::files::{self, dsl};
 use crate::storage::upload_object;
 use crate::util::generate_id;
@@ -24,9 +24,9 @@ use crate::web::pagination::Paginated;
 use crate::{Error, Result};
 
 use super::{
-    FileDto, FileObject, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ListFilesParams,
-    PhotoExif, ALLOWED_IMAGE_TYPES, MAX_DIMENSION, MAX_PREVIEW_DIMENSION, MAX_THUMB_DIMENSION,
-    ORIGINAL_PATH,
+    ALLOWED_IMAGE_TYPES, FileDto, FileObject, FilePayload, ImgDimension, ImgVersion, ImgVersionDto,
+    ListFilesParams, MAX_DIMENSION, MAX_PREVIEW_DIMENSION, MAX_THUMB_DIMENSION, ORIGINAL_PATH,
+    PhotoExif,
 };
 
 const MAX_PER_PAGE: i32 = 50;

@@ -4,10 +4,10 @@ use crate::clients::{
 };
 use crate::config::ClientCommand;
 
-use crate::db::create_db_pool;
 use crate::Result;
+use crate::db::create_db_pool;
 
-use super::{create_client, NewClient};
+use super::{NewClient, create_client};
 
 pub async fn run_client_command(cmd: ClientCommand) -> Result<()> {
     match cmd {

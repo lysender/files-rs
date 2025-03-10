@@ -1,8 +1,8 @@
 use axum::response::IntoResponse;
 use axum::{body::Body, http::StatusCode, response::Response};
 
-use crate::web::error::ErrorResponse;
 use crate::Error;
+use crate::web::error::ErrorResponse;
 
 #[derive(Debug)]
 pub struct JsonResponse {

@@ -1,10 +1,10 @@
+use crate::Result;
 use crate::config::UserCommand;
 use crate::db::create_db_pool;
 use crate::users::queries::{delete_user, list_users, update_user_password, update_user_status};
-use crate::Result;
 
-use super::queries::{create_user, get_user};
 use super::NewUser;
+use super::queries::{create_user, get_user};
 
 pub async fn run_user_command(cmd: UserCommand) -> Result<()> {
     match cmd {

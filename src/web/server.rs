@@ -1,18 +1,18 @@
 use std::process;
 use std::sync::Arc;
 
-use axum::extract::FromRef;
 use axum::Router;
+use axum::extract::FromRef;
 use deadpool_diesel::sqlite::Pool;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::{info, Level};
+use tracing::{Level, info};
 
+use crate::Result;
 use crate::config::Config;
 use crate::db::create_db_pool;
 use crate::web::routes::all_routes;
-use crate::Result;
 
 #[derive(Clone, FromRef)]
 pub struct AppState {

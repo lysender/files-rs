@@ -1,7 +1,7 @@
-use crate::buckets::{create_bucket, delete_bucket, NewBucket};
+use crate::Result;
+use crate::buckets::{NewBucket, create_bucket, delete_bucket};
 use crate::config::BucketCommand;
 use crate::db::create_db_pool;
-use crate::Result;
 
 use super::{get_bucket, list_buckets};
 
