@@ -1,10 +1,10 @@
-use axum::{extract::State, Extension};
+use axum::{Extension, extract::State};
 
 use crate::{
-    auth::Actor,
-    buckets::{list_buckets, BucketDto},
-    web::{response::JsonResponse, server::AppState},
     Result,
+    auth::Actor,
+    buckets::{BucketDto, list_buckets},
+    web::{response::JsonResponse, server::AppState},
 };
 
 pub async fn list_buckets_handler(

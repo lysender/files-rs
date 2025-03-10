@@ -1,6 +1,6 @@
 use axum::extract::DefaultBodyLimit;
 use axum::middleware;
-use axum::{routing::get, Router};
+use axum::{Router, routing::get};
 use tower_http::limit::RequestBodyLimitLayer;
 
 use crate::web::middlewares::file_middleware;
@@ -11,7 +11,7 @@ use super::{create_file_handler, delete_file_handler, get_file_handler, list_fil
 pub fn files_routes(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/", get(list_files_handler).post(create_file_handler))
-        .nest("/:file_id", inner_file_routes(state.clone()))
+        .nest("/{file_id}", inner_file_routes(state.clone()))
         .layer(DefaultBodyLimit::max(8000000))
         .layer(RequestBodyLimitLayer::new(8000000))
         .with_state(state)

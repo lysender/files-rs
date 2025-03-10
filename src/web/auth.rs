@@ -1,21 +1,22 @@
-use axum::{extract::State, middleware, routing::get, Extension, Json, Router};
+use axum::{Extension, Json, Router, extract::State, middleware, routing::get};
 
 use crate::{
-    auth::{authenticate, Actor, Credentials},
-    Error, Result,
+    Result,
+    auth::{Actor, Credentials, authenticate},
 };
 
 use super::{middlewares::require_auth_middleware, response::JsonResponse, server::AppState};
 
+#[axum::debug_handler]
 pub async fn authenticate_handler(
     State(state): State<AppState>,
-    payload: Option<Json<Credentials>>,
+    payload: Json<Credentials>,
 ) -> Result<JsonResponse> {
-    let Some(credentials) = payload else {
-        return Err(Error::BadRequest("Invalid credentials payload".into()));
-    };
+    //let Some(credentials) = payload else {
+    //    return Err(Error::BadRequest("Invalid credentials payload".into()));
+    //};
 
-    let res = authenticate(&state, &credentials).await?;
+    let res = authenticate(&state, &payload).await?;
     Ok(JsonResponse::new(serde_json::to_string(&res).unwrap()))
 }
 

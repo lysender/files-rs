@@ -1,8 +1,9 @@
 use chrono::{DateTime, NaiveDateTime};
 use deadpool_diesel::sqlite::Pool;
 use exif::{In, Tag};
-use image::imageops;
+use google_cloud_storage::client::Client;
 use image::ImageReader;
+use image::imageops;
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -14,7 +15,7 @@ use tracing::error;
 use validator::Validate;
 
 use crate::buckets::BucketDto;
-use crate::dirs::{update_dir_timestamp, Dir};
+use crate::dirs::{Dir, update_dir_timestamp};
 use crate::schema::files::{self, dsl};
 use crate::storage::upload_object;
 use crate::util::generate_id;
@@ -24,9 +25,9 @@ use crate::web::pagination::Paginated;
 use crate::{Error, Result};
 
 use super::{
-    FileDto, FileObject, FilePayload, ImgDimension, ImgVersion, ImgVersionDto, ListFilesParams,
-    PhotoExif, ALLOWED_IMAGE_TYPES, MAX_DIMENSION, MAX_PREVIEW_DIMENSION, MAX_THUMB_DIMENSION,
-    ORIGINAL_PATH,
+    ALLOWED_IMAGE_TYPES, FileDto, FileObject, FilePayload, ImgDimension, ImgVersion, ImgVersionDto,
+    ListFilesParams, MAX_DIMENSION, MAX_PREVIEW_DIMENSION, MAX_THUMB_DIMENSION, ORIGINAL_PATH,
+    PhotoExif,
 };
 
 const MAX_PER_PAGE: i32 = 50;
@@ -210,6 +211,7 @@ pub async fn count_dir_files(db_pool: &Pool, dir_id: &str) -> Result<i64> {
 
 pub async fn create_file(
     db_pool: &Pool,
+    storage_client: &Client,
     bucket: &BucketDto,
     dir: &Dir,
     data: &FilePayload,
@@ -279,7 +281,9 @@ pub async fn create_file(
         file_dto.img_taken_at = exif_info.img_taken_at;
     }
 
-    if let Err(upload_err) = upload_object(bucket, dir, &data.upload_dir, &file_dto).await {
+    if let Err(upload_err) =
+        upload_object(storage_client, bucket, dir, &data.upload_dir, &file_dto).await
+    {
         if let Err(e) = cleanup_temp_uploads(data, Some(&file_dto)) {
             error!("Cleanup file(s): {}", e);
         }

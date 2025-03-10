@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 use crate::{
-    roles::{roles_permissions, to_permissions, Permission, Role},
+    roles::{Permission, Role, roles_permissions, to_permissions},
     users::UserDto,
 };
 

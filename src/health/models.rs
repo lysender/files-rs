@@ -16,7 +16,6 @@ pub struct HealthStatus {
 pub struct HealthChecks {
     pub cloud_storage: String,
     pub database: String,
-    pub secrets: String,
 }
 
 impl HealthStatus {
@@ -30,11 +29,10 @@ impl HealthChecks {
         Self {
             cloud_storage: "DOWN".to_string(),
             database: "DOWN".to_string(),
-            secrets: "DOWN".to_string(),
         }
     }
 
     pub fn is_healthy(&self) -> bool {
-        self.cloud_storage == "UP" && self.database == "UP" && self.secrets == "UP"
+        self.cloud_storage == "UP" && self.database == "UP"
     }
 }

@@ -1,36 +1,35 @@
-use std::process;
 use std::sync::Arc;
 
-use axum::extract::FromRef;
 use axum::Router;
+use axum::extract::FromRef;
 use deadpool_diesel::sqlite::Pool;
+use google_cloud_storage::client::Client;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::{info, Level};
+use tracing::{Level, info};
 
+use crate::Result;
 use crate::config::Config;
 use crate::db::create_db_pool;
+use crate::storage::create_storage_client;
 use crate::web::routes::all_routes;
-use crate::Result;
 
 #[derive(Clone, FromRef)]
 pub struct AppState {
     pub config: Arc<Config>,
+    pub storage_client: Arc<Client>,
     pub db_pool: Pool,
 }
 
-pub async fn run_web_server() -> Result<()> {
-    let config = Config::build().unwrap_or_else(|err| {
-        eprintln!("{err}");
-        process::exit(1);
-    });
-
+pub async fn run_web_server(config: &Config) -> Result<()> {
     let port = config.server.port;
 
-    let pool = create_db_pool();
+    let storage_client = create_storage_client(config.cloud.credentials.as_str()).await?;
+    let pool = create_db_pool(config.db.url.as_str());
     let state = AppState {
-        config: Arc::new(config),
+        config: Arc::new(config.clone()),
+        storage_client: Arc::new(storage_client),
         db_pool: pool,
     };
 

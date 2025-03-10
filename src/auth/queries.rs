@@ -1,16 +1,16 @@
 use validator::Validate;
 
 use super::{
-    create_auth_token, verify_auth_token, verify_password, Actor, ActorPayload, AuthResponse,
-    Credentials,
+    Actor, ActorPayload, AuthResponse, Credentials, create_auth_token, verify_auth_token,
+    verify_password,
 };
 
 use crate::{
+    Error, Result,
     clients::get_client,
     users::{find_user_by_username, get_user},
     validators::flatten_errors,
     web::server::AppState,
-    Error, Result,
 };
 
 pub async fn authenticate(state: &AppState, credentials: &Credentials) -> Result<AuthResponse> {

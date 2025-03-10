@@ -1,4 +1,4 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 
 use super::error::ErrorResponse;
 use super::server::AppState;

@@ -73,6 +73,9 @@ mod tests {
         };
         let errors = data.validate().unwrap_err();
         let flattened = flatten_errors(&errors);
-        assert_eq!(flattened, "label: must be between 1 and 100 characters, name: must be between 1 and 50 characters");
+        assert_eq!(
+            flattened,
+            "label: must be between 1 and 100 characters, name: must be between 1 and 50 characters"
+        );
     }
 }

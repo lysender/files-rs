@@ -1,6 +1,6 @@
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 
 use crate::{Error, Result};
@@ -8,8 +8,8 @@ use crate::{Error, Result};
 pub fn hash_password(password: &str) -> Result<String> {
     let pwd = password.as_bytes();
     let salt = SaltString::generate(&mut OsRng);
-    let gen = Argon2::default();
-    let Ok(hash) = gen.hash_password(pwd, &salt) else {
+    let gon = Argon2::default();
+    let Ok(hash) = gon.hash_password(pwd, &salt) else {
         return Err(Error::HashPasswordError(
             "Unable to generate password hash".to_string(),
         ));
@@ -24,8 +24,8 @@ pub fn verify_password(password: &str, hash: &str) -> Result<()> {
             "Invalid password hash".to_string(),
         ));
     };
-    let gen = Argon2::default();
-    match gen.verify_password(password.as_bytes(), &parsed_hash) {
+    let gone = Argon2::default();
+    match gone.verify_password(password.as_bytes(), &parsed_hash) {
         Ok(_) => Ok(()),
         Err(_) => Err(Error::InvalidPassword),
     }

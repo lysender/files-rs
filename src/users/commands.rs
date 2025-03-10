@@ -1,28 +1,28 @@
-use crate::config::UserCommand;
+use crate::Result;
+use crate::config::{Config, UserCommand};
 use crate::db::create_db_pool;
 use crate::users::queries::{delete_user, list_users, update_user_password, update_user_status};
-use crate::Result;
 
-use super::queries::{create_user, get_user};
 use super::NewUser;
+use super::queries::{create_user, get_user};
 
-pub async fn run_user_command(cmd: UserCommand) -> Result<()> {
+pub async fn run_user_command(cmd: UserCommand, config: &Config) -> Result<()> {
     match cmd {
-        UserCommand::List { client_id } => run_list_users(client_id).await,
+        UserCommand::List { client_id } => run_list_users(config, client_id).await,
         UserCommand::Create {
             client_id,
             username,
             roles,
-        } => run_create_user(client_id, username, roles).await,
-        UserCommand::Password { id } => run_set_user_password(id).await,
-        UserCommand::Disable { id } => run_disable_user(id).await,
-        UserCommand::Enable { id } => run_enable_user(id).await,
-        UserCommand::Delete { id } => run_delete_user(id).await,
+        } => run_create_user(config, client_id, username, roles).await,
+        UserCommand::Password { id } => run_set_user_password(config, id).await,
+        UserCommand::Disable { id } => run_disable_user(config, id).await,
+        UserCommand::Enable { id } => run_enable_user(config, id).await,
+        UserCommand::Delete { id } => run_delete_user(config, id).await,
     }
 }
 
-async fn run_list_users(client_id: String) -> Result<()> {
-    let db_pool = create_db_pool();
+async fn run_list_users(config: &Config, client_id: String) -> Result<()> {
+    let db_pool = create_db_pool(config.db.url.as_str());
     let users = list_users(&db_pool, &client_id).await?;
     for user in users.iter() {
         println!(
@@ -33,7 +33,12 @@ async fn run_list_users(client_id: String) -> Result<()> {
     Ok(())
 }
 
-async fn run_create_user(client_id: String, username: String, roles: String) -> Result<()> {
+async fn run_create_user(
+    config: &Config,
+    client_id: String,
+    username: String,
+    roles: String,
+) -> Result<()> {
     let Ok(password) = rpassword::prompt_password("Enter password for the new user: ") else {
         return Err("Failed to read password".into());
     };
@@ -45,7 +50,7 @@ async fn run_create_user(client_id: String, username: String, roles: String) -> 
         roles,
     };
 
-    let db_pool = create_db_pool();
+    let db_pool = create_db_pool(config.db.url.as_str());
     let user = create_user(&db_pool, &client_id, &new_user).await?;
     println!(
         "{{ id = {}, username = {} status = {} }}",
@@ -55,8 +60,8 @@ async fn run_create_user(client_id: String, username: String, roles: String) -> 
     Ok(())
 }
 
-async fn run_set_user_password(id: String) -> Result<()> {
-    let db_pool = create_db_pool();
+async fn run_set_user_password(config: &Config, id: String) -> Result<()> {
+    let db_pool = create_db_pool(config.db.url.as_str());
     let user = get_user(&db_pool, &id).await?;
     if let Some(node) = user {
         let prompt = format!("Enter new password for {}: ", node.username);
@@ -78,8 +83,8 @@ async fn run_set_user_password(id: String) -> Result<()> {
     Ok(())
 }
 
-async fn run_disable_user(id: String) -> Result<()> {
-    let db_pool = create_db_pool();
+async fn run_disable_user(config: &Config, id: String) -> Result<()> {
+    let db_pool = create_db_pool(config.db.url.as_str());
     let user = get_user(&db_pool, &id).await?;
     if let Some(node) = user {
         if &node.status == "inactive" {
@@ -94,8 +99,8 @@ async fn run_disable_user(id: String) -> Result<()> {
     Ok(())
 }
 
-async fn run_enable_user(id: String) -> Result<()> {
-    let db_pool = create_db_pool();
+async fn run_enable_user(config: &Config, id: String) -> Result<()> {
+    let db_pool = create_db_pool(config.db.url.as_str());
     let user = get_user(&db_pool, &id).await?;
     if let Some(node) = user {
         if &node.status == "inactive" {
@@ -110,8 +115,8 @@ async fn run_enable_user(id: String) -> Result<()> {
     Ok(())
 }
 
-async fn run_delete_user(id: String) -> Result<()> {
-    let db_pool = create_db_pool();
+async fn run_delete_user(config: &Config, id: String) -> Result<()> {
+    let db_pool = create_db_pool(config.db.url.as_str());
     let user = get_user(&db_pool, &id).await?;
     if let Some(_) = user {
         let _ = delete_user(&db_pool, &id).await?;

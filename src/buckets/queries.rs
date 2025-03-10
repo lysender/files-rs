@@ -3,6 +3,7 @@ use deadpool_diesel::sqlite::Pool;
 use diesel::dsl::count_star;
 use diesel::prelude::*;
 use diesel::{QueryDsl, SelectableHelper};
+use google_cloud_storage::client::Client;
 use tracing::error;
 use validator::Validate;
 
@@ -52,7 +53,12 @@ pub async fn list_buckets(db_pool: &Pool, client_id: &str) -> Result<Vec<BucketD
     }
 }
 
-pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) -> Result<BucketDto> {
+pub async fn create_bucket(
+    db_pool: &Pool,
+    storage_client: &Client,
+    client_id: &str,
+    data: &NewBucket,
+) -> Result<BucketDto> {
     if let Err(errors) = data.validate() {
         return Err(Error::ValidationError(flatten_errors(&errors)));
     }
@@ -81,7 +87,7 @@ pub async fn create_bucket(db_pool: &Pool, client_id: &str, data: &NewBucket) ->
     }
 
     // Validate against the cloud storage
-    let _ = read_bucket(&data.name).await?;
+    let _ = read_bucket(storage_client, &data.name).await?;
 
     let data_copy = data.clone();
     let today = chrono::Utc::now().timestamp();

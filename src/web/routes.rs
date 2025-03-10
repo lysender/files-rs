@@ -1,9 +1,8 @@
 use crate::web::server::AppState;
 
 use axum::{
-    middleware,
+    Router, middleware,
     routing::{any, get, post},
-    Router,
 };
 
 use super::{

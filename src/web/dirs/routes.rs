@@ -1,4 +1,4 @@
-use axum::{middleware, routing::get, Router};
+use axum::{Router, middleware, routing::get};
 
 use crate::web::files::files_routes;
 use crate::web::{middlewares::dir_middleware, server::AppState};
@@ -10,7 +10,7 @@ use super::{
 pub fn dir_routes(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/", get(list_dirs_handler).post(create_dir_handler))
-        .nest("/:dir_id", inner_dir_routes(state.clone()))
+        .nest("/{dir_id}", inner_dir_routes(state.clone()))
         .with_state(state)
 }
 

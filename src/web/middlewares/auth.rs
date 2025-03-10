@@ -1,16 +1,16 @@
 use axum::{
+    Extension,
     body::Body,
     extract::{Request, State},
     http::header,
     middleware::Next,
     response::Response,
-    Extension,
 };
 
 use crate::{
-    auth::{authenticate_token, Actor},
-    web::{response::to_error_response, server::AppState},
     Error,
+    auth::{Actor, authenticate_token},
+    web::{response::to_error_response, server::AppState},
 };
 
 pub async fn auth_middleware(
@@ -55,13 +55,13 @@ pub async fn auth_middleware(
 }
 
 pub async fn require_auth_middleware(
-    actor: Option<Extension<Actor>>,
+    actor: Extension<Actor>,
     request: Request,
     next: Next,
 ) -> Response<Body> {
-    let Some(actor) = actor else {
-        return to_error_response(Error::NoAuthToken);
-    };
+    //let Some(actor) = actor else {
+    //    return to_error_response(Error::NoAuthToken);
+    //};
     if !actor.has_auth_scope() {
         return to_error_response(Error::InsufficientAuthScope);
     }
