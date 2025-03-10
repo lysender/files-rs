@@ -1,41 +1,42 @@
 use axum::{
+    Extension,
     extract::{Multipart, Query, State},
     http::StatusCode,
-    Extension,
 };
-use tokio::{fs::create_dir_all, fs::File, io::AsyncWriteExt};
+use tokio::{fs::File, fs::create_dir_all, io::AsyncWriteExt};
 
 use crate::{
+    Error, Result,
     auth::Actor,
     buckets::BucketDto,
     dirs::Dir,
     files::{
-        create_file, delete_file, list_files, FileDto, FileObject, FilePayload, ImgVersion,
-        ListFilesParams,
+        FileDto, FileObject, FilePayload, ImgVersion, ListFilesParams, create_file, delete_file,
+        list_files,
     },
     roles::Permission,
     storage::{delete_file_object, format_file, format_files},
     util::slugify_prefixed,
     web::{pagination::Paginated, response::JsonResponse, server::AppState},
-    Error, Result,
 };
 
+#[axum::debug_handler]
 pub async fn list_files_handler(
     State(state): State<AppState>,
     Extension(actor): Extension<Actor>,
     Extension(bucket): Extension<BucketDto>,
     Extension(dir): Extension<Dir>,
-    query: Option<Query<ListFilesParams>>,
+    query: Query<ListFilesParams>,
 ) -> Result<JsonResponse> {
     let permissions = vec![Permission::FilesList, Permission::FilesView];
     if !actor.has_permissions(&permissions) {
         return Err(Error::Forbidden("Insufficient permissions".to_string()));
     }
 
-    let Some(params) = query else {
-        return Err(Error::BadRequest("Invalid query parameters".to_string()));
-    };
-    let files = list_files(&state.db_pool, &dir, &params).await?;
+    //let Some(params) = query else {
+    //    return Err(Error::BadRequest("Invalid query parameters".to_string()));
+    //};
+    let files = list_files(&state.db_pool, &dir, &query).await?;
 
     // Generate download urls for each files
     let items: Vec<FileDto> = files.data.into_iter().map(|f| f.into()).collect();
@@ -49,6 +50,7 @@ pub async fn list_files_handler(
     Ok(JsonResponse::new(serde_json::to_string(&listing).unwrap()))
 }
 
+#[axum::debug_handler]
 pub async fn create_file_handler(
     State(state): State<AppState>,
     Extension(actor): Extension<Actor>,

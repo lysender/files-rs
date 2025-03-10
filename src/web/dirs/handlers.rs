@@ -1,47 +1,49 @@
 use axum::{
+    Extension,
     extract::{Json, Path, Query, State},
     http::StatusCode,
-    Extension,
 };
 
 use crate::{
+    Error, Result,
     auth::Actor,
     dirs::{
-        create_dir, delete_dir, get_dir, list_dirs, update_dir, Dir, ListDirsParams, NewDir,
-        UpdateDir,
+        Dir, ListDirsParams, NewDir, UpdateDir, create_dir, delete_dir, get_dir, list_dirs,
+        update_dir,
     },
     roles::Permission,
     web::{params::Params, response::JsonResponse, server::AppState},
-    Error, Result,
 };
 
+#[axum::debug_handler]
 pub async fn list_dirs_handler(
     State(state): State<AppState>,
     Path(bucket_id): Path<String>,
-    query: Option<Query<ListDirsParams>>,
+    query: Query<ListDirsParams>,
 ) -> Result<JsonResponse> {
-    let Some(params) = query else {
-        return Err(Error::BadRequest("Invalid query parameters".to_string()));
-    };
-    let dirs = list_dirs(&state.db_pool, &bucket_id, &params).await?;
+    //let Some(params) = query else {
+    //    return Err(Error::BadRequest("Invalid query parameters".to_string()));
+    //};
+    let dirs = list_dirs(&state.db_pool, &bucket_id, &query).await?;
     Ok(JsonResponse::new(serde_json::to_string(&dirs).unwrap()))
 }
 
+#[axum::debug_handler]
 pub async fn create_dir_handler(
     State(state): State<AppState>,
     Extension(actor): Extension<Actor>,
     Path(bucket_id): Path<String>,
-    payload: Option<Json<NewDir>>,
+    payload: Json<NewDir>,
 ) -> Result<JsonResponse> {
     let permissions = vec![Permission::DirsCreate];
     if !actor.has_permissions(&permissions) {
         return Err(Error::Forbidden("Insufficient permissions".to_string()));
     }
 
-    let Some(data) = payload else {
-        return Err(Error::BadRequest("Invalid request payload".to_string()));
-    };
-    let dir = create_dir(&state.db_pool, &bucket_id, &data).await?;
+    //let Some(data) = payload else {
+    //    return Err(Error::BadRequest("Invalid request payload".to_string()));
+    //};
+    let dir = create_dir(&state.db_pool, &bucket_id, &payload).await?;
     Ok(JsonResponse::with_status(
         StatusCode::CREATED,
         serde_json::to_string(&dir).unwrap(),
@@ -53,12 +55,13 @@ pub async fn get_dir_handler(Extension(dir): Extension<Dir>) -> Result<JsonRespo
     Ok(JsonResponse::new(serde_json::to_string(&dir).unwrap()))
 }
 
+#[axum::debug_handler]
 pub async fn update_dir_handler(
     State(state): State<AppState>,
     Extension(actor): Extension<Actor>,
     Extension(dir): Extension<Dir>,
     Path(params): Path<Params>,
-    payload: Option<Json<UpdateDir>>,
+    payload: Json<UpdateDir>,
 ) -> Result<JsonResponse> {
     let permissions = vec![Permission::DirsEdit];
     if !actor.has_permissions(&permissions) {
@@ -66,11 +69,11 @@ pub async fn update_dir_handler(
     }
 
     let dir_id = params.dir_id.clone().expect("dir_id is required");
-    let Some(data) = payload else {
-        return Err(Error::BadRequest("Invalid request payload".to_string()));
-    };
+    //let Some(data) = payload else {
+    //    return Err(Error::BadRequest("Invalid request payload".to_string()));
+    //};
 
-    let updated = update_dir(&state.db_pool, &dir_id, &data).await?;
+    let updated = update_dir(&state.db_pool, &dir_id, &payload).await?;
 
     // Either return the updated dir or the original one
     match updated {
