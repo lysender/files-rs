@@ -1,7 +1,7 @@
 use axum::{Extension, Json, Router, extract::State, middleware, routing::get};
 
 use crate::{
-    Error, Result,
+    Result,
     auth::{Actor, Credentials, authenticate},
 };
 

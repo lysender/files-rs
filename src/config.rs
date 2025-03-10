@@ -11,7 +11,6 @@ pub const JWT_SECRET: &str = "JWT_SECRET";
 pub const GOOGLE_APPLICATION_CREDENTIALS: &str = "GOOGLE_APPLICATION_CREDENTIALS";
 pub const GOOGLE_PROJECT_ID: &str = "GOOGLE_PROJECT_ID";
 pub const PORT: &str = "PORT";
-pub const RUST_LOG: &str = "RUST_LOG";
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
