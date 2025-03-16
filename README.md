@@ -2,6 +2,10 @@
 
 `files-rs` is a simple file storage service, written in Rust btw.
 
+## Project archived, see memo-rs project instead
+
+https://github.com/lysender/memo-rs
+
 It is designed for personal use and not indended for large number of concurrent users.
 The goal of the service is to provide an economical way to store and retrieve
 files in the cloud.
